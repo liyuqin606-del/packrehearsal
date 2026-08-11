@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/liyuqin606-del/packrehearsal/schemas/report-v1.schema.json",
+  "title": "PackRehearsal scan report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifacts",
+    "baseline_fingerprints",
+    "counts",
+    "findings",
+    "packages",
+    "root",
+    "scan_id",
+    "schema_version",
+    "tool_version"
+  ],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "tool_version": { "type": "string", "minLength": 1 },
+    "root": { "type": "string" },
+    "scan_id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "baseline_fingerprints": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[0-9a-f]{24}$" }
+    },
+    "counts": { "$ref": "#/$defs/counts" },
+    "packages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/package" }
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/artifact" }
+    },
+    "metadata": { "type": "object" }
+  },
+  "$defs": {
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["critical", "high", "info", "low", "medium"],
+      "properties": {
+        "critical": { "type": "integer", "minimum": 0 },
+        "high": { "type": "integer", "minimum": 0 },
+        "medium": { "type": "integer", "minimum": 0 },
+        "low": { "type": "integer", "minimum": 0 },
+        "info": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "package": {
+      "type": "object",
+      "required": [
+        "ecosystem",
+        "entrypoints",
+        "expected_files",
+        "internal_dependencies",
+        "manifest",
+        "name",
+        "root",
+        "version"
+      ],
+      "properties": {
+        "ecosystem": { "enum": ["npm", "python", "rust"] },
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "root": { "type": "string" },
+        "manifest": { "type": "string" },
+        "workspace_root": { "type": "string" },
+        "license": { "type": "string" },
+        "readme": { "type": "string" },
+        "entrypoints": { "type": "array", "items": { "type": "string" } },
+        "expected_files": { "type": "array", "items": { "type": "string" } },
+        "internal_dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "name", "requirement"],
+            "properties": {
+              "kind": { "type": "string" },
+              "name": { "type": "string" },
+              "requirement": { "type": "string" }
+            }
+          }
+        },
+        "metadata": { "type": "object" }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fingerprint",
+        "message",
+        "remediation",
+        "rule_id",
+        "severity",
+        "title"
+      ],
+      "properties": {
+        "rule_id": { "type": "string", "minLength": 1 },
+        "severity": { "enum": ["critical", "high", "medium", "low", "info"] },
+        "title": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 },
+        "remediation": { "type": "string", "minLength": 1 },
+        "package": { "type": "string" },
+        "location": { "type": "string" },
+        "fingerprint": { "type": "string", "pattern": "^[0-9a-f]{24}$" },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "value"],
+            "properties": {
+              "key": { "type": "string" },
+              "value": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "required": ["entries", "format", "path", "sha256", "size"],
+      "properties": {
+        "path": { "type": "string" },
+        "format": { "type": "string" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "size": { "type": "integer", "minimum": 1 },
+        "metadata": { "type": "object" },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["kind", "path", "size"],
+            "properties": {
+              "kind": { "enum": ["file", "directory"] },
+              "path": { "type": "string" },
+              "size": { "type": "integer", "minimum": 0 },
+              "compressed_size": { "type": "integer", "minimum": 0 },
+              "mode": { "type": "integer", "minimum": 0 },
+              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

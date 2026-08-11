@@ -1,0 +1,46 @@
+{
+  "allow_network": false,
+  "archive": {
+    "hash_entry_bytes": 8388608,
+    "max_archive_bytes": 268435456,
+    "max_compression_ratio": 200.0,
+    "max_entries": 20000,
+    "max_entry_bytes": 67108864,
+    "max_total_unpacked_bytes": 536870912
+  },
+  "disabled_rules": [],
+  "enabled_rules": [],
+  "exclude": [
+    ".git/**",
+    ".hg/**",
+    ".svn/**",
+    "node_modules/**",
+    "target/**",
+    ".venv/**",
+    "venv/**",
+    "dist/**",
+    "build/**"
+  ],
+  "fail_on": "high",
+  "include_hidden": false,
+  "max_depth": 12,
+  "required_files": [
+    "README*",
+    "LICENSE*"
+  ],
+  "sensitive_patterns": [
+    ".env",
+    ".env.*",
+    "*.pem",
+    "*.key",
+    "*.p12",
+    "*.pfx",
+    "id_rsa",
+    "id_ed25519",
+    "**/.npmrc",
+    "**/.pypirc",
+    "**/.cargo/credentials*"
+  ],
+  "severity_overrides": {},
+  "trusted_timeout_seconds": 180
+}

@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.12"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Sync locked development environment
+        run: uv sync --frozen --extra dev
+      - name: Lint
+        run: uv run ruff check .
+      - name: Type check
+        run: uv run mypy src/packrehearsal
+      - name: Test with branch coverage
+        run: uv run pytest --cov=packrehearsal --cov-branch --cov-report=term
+      - name: Dogfood the safe static scan
+        run: uv run packrehearsal scan . --format json --output packrehearsal-report.json
+
+  tests:
+    needs: quality
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.11", "3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.12"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Sync locked test environment
+        run: uv sync --frozen --extra dev --python "${{ matrix.python }}"
+      - name: Run tests
+        run: uv run --python "${{ matrix.python }}" pytest
+
+  package:
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.12"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Sync locked build environment
+        run: uv sync --frozen --extra dev
+      - name: Build distributions
+        run: uv run python -m build
+      - name: Inspect release artifacts
+        run: |
+          uv run packrehearsal inspect dist/*.whl --format json --output wheel-report.json
+          uv run packrehearsal inspect dist/*.tar.gz --format json --output sdist-report.json
+          uv run packrehearsal scan . \
+            --artifact dist/*.whl \
+            --artifact dist/*.tar.gz \
+            --format json \
+            --output release-report.json
+      - name: Upload distributions and reports
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: packrehearsal-distributions
+          path: |
+            dist/*
+            wheel-report.json
+            sdist-report.json
+            release-report.json
+          if-no-files-found: error
+          retention-days: 14

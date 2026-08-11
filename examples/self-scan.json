@@ -1,0 +1,45 @@
+{
+  "artifacts": [],
+  "baseline_fingerprints": [],
+  "counts": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "low": 0,
+    "medium": 0
+  },
+  "findings": [],
+  "packages": [
+    {
+      "ecosystem": "python",
+      "entrypoints": [
+        "console:packrehearsal=packrehearsal.cli:main"
+      ],
+      "expected_files": [
+        "README.md"
+      ],
+      "internal_dependencies": [],
+      "license": "Apache-2.0",
+      "manifest": "pyproject.toml",
+      "metadata": {
+        "build_system": {
+          "build-backend": "hatchling.build",
+          "requires": [
+            "hatchling>=1.25"
+          ]
+        },
+        "dynamic_version": false,
+        "metadata_source": "pep621",
+        "requires_python": ">=3.11"
+      },
+      "name": "packrehearsal",
+      "readme": "README.md",
+      "root": ".",
+      "version": "0.1.0"
+    }
+  ],
+  "root": ".",
+  "scan_id": "74909251d88d6cc8a72a1feea6b6b88c391c952028aa09daf4d3bcb1df43e6d9",
+  "schema_version": "1",
+  "tool_version": "0.1.0"
+}

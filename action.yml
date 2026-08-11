@@ -1,0 +1,53 @@
+name: PackRehearsal
+description: Audit release metadata and candidate package artifacts before publishing.
+author: Yuqin Li
+
+branding:
+  icon: package
+  color: blue
+
+inputs:
+  root:
+    description: Repository-relative root to scan.
+    default: .
+  format:
+    description: Report format (console, json, markdown, or sarif).
+    default: sarif
+  output:
+    description: Optional path for the report; empty writes to the log.
+    default: packrehearsal.sarif
+  fail-on:
+    description: Minimum new-finding severity that fails the action.
+    default: high
+  baseline:
+    description: Optional baseline path; rejected for pull-request events.
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Inspect release metadata and artifacts
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        PR_BASELINE: ${{ inputs.baseline }}
+        PR_EVENT_NAME: ${{ github.event_name }}
+        PR_FAIL_ON: ${{ inputs['fail-on'] }}
+        PR_FORMAT: ${{ inputs.format }}
+        PR_OUTPUT: ${{ inputs.output }}
+        PR_ROOT: ${{ inputs.root }}
+      run: |
+        set -euo pipefail
+        args=(scan "$PR_ROOT" --no-repo-config --format "$PR_FORMAT" --fail-on "$PR_FAIL_ON")
+        if [[ -n "$PR_OUTPUT" ]]; then
+          args+=(--output "$PR_OUTPUT")
+        fi
+        if [[ -n "$PR_BASELINE" ]]; then
+          if [[ "$PR_EVENT_NAME" == "pull_request" || "$PR_EVENT_NAME" == "pull_request_target" || "$PR_EVENT_NAME" == "merge_group" ]]; then
+            echo "::error::Repository baselines are rejected on pull-request and merge-group events because the proposed revision can suppress its own findings."
+            exit 2
+          fi
+          args+=(--baseline "$PR_BASELINE")
+        fi
+        python -I -c 'import runpy,sys; sys.path.insert(0,sys.argv.pop(1)); runpy.run_module("packrehearsal",run_name="__main__")' \
+          "$ACTION_PATH/src" "${args[@]}"

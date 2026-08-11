@@ -1,0 +1,20 @@
+{
+  "artifacts": [],
+  "created_at": "2026-08-11T00:00:00Z",
+  "finding_counts": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "low": 0,
+    "medium": 0
+  },
+  "package_identities": [
+    "python:packrehearsal@0.1.0"
+  ],
+  "receipt_id": "ea8ed7552d2c794cd20747b96056a94c7236e398250ae3d5c3a878ec70cda697",
+  "report_scan_id": "74909251d88d6cc8a72a1feea6b6b88c391c952028aa09daf4d3bcb1df43e6d9",
+  "report_sha256": "b5da7f5e5246a7a071cff344eaa5f908e2569a3414a160df05ebe1c9b842edab",
+  "schema_version": "1",
+  "tool": "packrehearsal",
+  "tool_version": "0.1.0"
+}

@@ -1,0 +1,42 @@
+name: Bug report
+description: Report an incorrect finding, unsafe behavior, or CLI failure.
+title: "bug: "
+labels: [bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: Do not post credentials or undisclosed vulnerabilities. Use private reporting for security issues.
+  - type: input
+    id: version
+    attributes:
+      label: PackRehearsal version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: ecosystem
+    attributes:
+      label: Ecosystem
+      options: [npm, Python, Rust, archive-only, other]
+    validations:
+      required: true
+  - type: textarea
+    id: reproducer
+    attributes:
+      label: Minimal public reproducer
+      description: Include the command, smallest safe manifest or generated fixture, and actual output.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior and evidence
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: I removed tokens, credentials, private source, and personal data.
+          required: true

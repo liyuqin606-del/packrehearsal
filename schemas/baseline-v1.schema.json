@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/liyuqin606-del/packrehearsal/schemas/baseline-v1.schema.json",
+  "title": "PackRehearsal baseline v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["entries", "report_scan_id", "schema_version", "tool"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "tool": { "const": "packrehearsal" },
+    "report_scan_id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "entries": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fingerprint", "location", "package", "rule_id"],
+        "properties": {
+          "fingerprint": { "type": "string", "pattern": "^[0-9a-f]{24}$" },
+          "rule_id": { "type": "string", "minLength": 1 },
+          "location": { "type": ["string", "null"] },
+          "package": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}

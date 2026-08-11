@@ -1,0 +1,37 @@
+name: Rule proposal
+description: Propose an evidence-based release finding.
+title: "rule: "
+labels: [rule-proposal, needs-triage]
+body:
+  - type: dropdown
+    id: ecosystem
+    attributes:
+      label: Ecosystem
+      options: [common, npm, Python, Rust]
+    validations:
+      required: true
+  - type: textarea
+    id: failure
+    attributes:
+      label: Concrete release failure
+      description: Link a public specification, registry behavior, or minimal fixture.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Deterministic evidence available before publish
+    validations:
+      required: true
+  - type: textarea
+    id: false_positives
+    attributes:
+      label: Valid cases that must not trigger
+    validations:
+      required: true
+  - type: textarea
+    id: remediation
+    attributes:
+      label: Safe remediation
+    validations:
+      required: true

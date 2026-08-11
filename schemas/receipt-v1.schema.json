@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/liyuqin606-del/packrehearsal/schemas/receipt-v1.schema.json",
+  "title": "PackRehearsal evidence receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifacts",
+    "created_at",
+    "finding_counts",
+    "package_identities",
+    "receipt_id",
+    "report_scan_id",
+    "report_sha256",
+    "schema_version",
+    "tool",
+    "tool_version"
+  ],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "tool": { "const": "packrehearsal" },
+    "tool_version": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "receipt_id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "report_scan_id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "report_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "repository_commit": { "type": "string", "minLength": 1 },
+    "finding_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["critical", "high", "info", "low", "medium"],
+      "properties": {
+        "critical": { "type": "integer", "minimum": 0 },
+        "high": { "type": "integer", "minimum": 0 },
+        "medium": { "type": "integer", "minimum": 0 },
+        "low": { "type": "integer", "minimum": 0 },
+        "info": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "package_identities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string" }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "size"],
+        "properties": {
+          "path": { "type": "string" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "size": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  }
+}
