@@ -86,11 +86,17 @@ def regular_file_size_beneath(root: Path | str, relative: Path | str) -> int:
     if _supports_openat():
         with _open_regular_posix(anchor, parts) as descriptor:
             return os.fstat(descriptor).st_size
-    descriptor, before, candidate, resolved_root = _open_regular_fallback(anchor, parts)
+    descriptor, path_before, descriptor_before, candidate, resolved_root = _open_regular_fallback(
+        anchor, parts
+    )
     try:
         after_fd = os.fstat(descriptor)
-        _require_unchanged(before, after_fd, "file changed while its size was checked")
-        _verify_fallback_path(candidate, resolved_root, before)
+        _require_unchanged(
+            descriptor_before,
+            after_fd,
+            "file changed while its size was checked",
+        )
+        _verify_fallback_path(candidate, resolved_root, path_before)
         return after_fd.st_size
     finally:
         os.close(descriptor)
@@ -196,12 +202,14 @@ def _open_regular_posix(root: Path, parts: tuple[str, ...]) -> Iterator[int]:
 
 
 def _read_regular_fallback(root: Path, parts: tuple[str, ...], limit: int) -> bytes:
-    descriptor, before, candidate, resolved_root = _open_regular_fallback(root, parts)
+    descriptor, path_before, descriptor_before, candidate, resolved_root = _open_regular_fallback(
+        root, parts
+    )
     try:
         data = _bounded_read(descriptor, limit)
         after_fd = os.fstat(descriptor)
-        _require_unchanged(before, after_fd, "file changed while it was read")
-        _verify_fallback_path(candidate, resolved_root, before)
+        _require_unchanged(descriptor_before, after_fd, "file changed while it was read")
+        _verify_fallback_path(candidate, resolved_root, path_before)
         return data
     finally:
         os.close(descriptor)
@@ -209,10 +217,10 @@ def _read_regular_fallback(root: Path, parts: tuple[str, ...], limit: int) -> by
 
 def _open_regular_fallback(
     root: Path, parts: tuple[str, ...]
-) -> tuple[int, os.stat_result, Path, Path]:
+) -> tuple[int, os.stat_result, os.stat_result, Path, Path]:
     try:
         root_status = root.lstat()
-        if stat.S_ISLNK(root_status.st_mode) or not stat.S_ISDIR(root_status.st_mode):
+        if _is_link_or_reparse_point(root_status) or not stat.S_ISDIR(root_status.st_mode):
             raise SafeIOError(f"repository root is not a real directory: {root}")
         resolved_root = root.resolve(strict=True)
         candidate = root.joinpath(*parts)
@@ -221,8 +229,8 @@ def _open_regular_fallback(
         for index, component in enumerate(parts):
             current = current / component
             component_status = current.lstat()
-            if stat.S_ISLNK(component_status.st_mode):
-                raise SafeIOError(f"symbolic-link path component is not allowed: {current}")
+            if _is_link_or_reparse_point(component_status):
+                raise SafeIOError(f"link or reparse-point path component is not allowed: {current}")
             final = index == len(parts) - 1
             expected_type = stat.S_ISREG if final else stat.S_ISDIR
             if not expected_type(component_status.st_mode):
@@ -238,11 +246,13 @@ def _open_regular_fallback(
         try:
             if not stat.S_ISREG(opened.st_mode):
                 raise SafeIOError(f"path is not a regular file: {candidate}")
-            _require_unchanged(before, opened, "path changed while it was opened")
+            _require_same_file(before, opened, "path changed while it was opened")
+            if before.st_size != opened.st_size:
+                raise SafeIOError("path changed while it was opened")
         except BaseException:
             os.close(descriptor)
             raise
-        return descriptor, before, candidate, resolved_root
+        return descriptor, before, opened, candidate, resolved_root
     except SafeIOError:
         raise
     except OSError as exc:
@@ -271,21 +281,51 @@ def _require_identity(status: os.stat_result) -> None:
         raise SafeIOError("platform cannot verify stable file identity")
 
 
+def _require_same_file(
+    before: os.stat_result,
+    after: os.stat_result,
+    message: str,
+) -> None:
+    """Require two metadata views to identify the same filesystem object.
+
+    Path-based ``lstat`` and descriptor-based ``fstat`` are distinct metadata
+    views.  On Windows they can represent permission bits and nanosecond
+    timestamps differently even for the same open file.  Device/inode identity
+    and the normalized file type are stable across those views.
+    """
+
+    _require_identity(before)
+    _require_identity(after)
+    before_identity = (before.st_dev, before.st_ino)
+    after_identity = (after.st_dev, after.st_ino)
+    before_type = stat.S_IFMT(before.st_mode)
+    after_type = stat.S_IFMT(after.st_mode)
+    if before_identity != after_identity or before_type != after_type:
+        raise SafeIOError(message)
+
+
 def _require_unchanged(
     before: os.stat_result,
     after: os.stat_result,
     message: str,
 ) -> None:
-    _require_identity(before)
-    _require_identity(after)
-    before_identity = (before.st_dev, before.st_ino, before.st_mode)
-    after_identity = (after.st_dev, after.st_ino, after.st_mode)
-    if before_identity != after_identity:
-        raise SafeIOError(message)
+    """Require stable identity and contents within one metadata view."""
+
+    _require_same_file(before, after, message)
     before_content = (before.st_size, before.st_mtime_ns, before.st_ctime_ns)
     after_content = (after.st_size, after.st_mtime_ns, after.st_ctime_ns)
     if before_content != after_content:
         raise SafeIOError(message)
+
+
+def _is_link_or_reparse_point(status: os.stat_result) -> bool:
+    """Reject links and Windows reparse points before the fallback can follow them."""
+
+    if stat.S_ISLNK(status.st_mode):
+        return True
+    attributes = getattr(status, "st_file_attributes", 0)
+    reparse_attribute = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    return bool(reparse_attribute and attributes & reparse_attribute)
 
 
 def _bounded_read(descriptor: int, limit: int) -> bytes:

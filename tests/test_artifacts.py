@@ -369,7 +369,12 @@ def test_source_symlinks_cannot_escape_disposable_workspace(tmp_path: Path) -> N
         artifact_globs=("*.zip",),
     )
 
-    with pytest.raises(RehearsalError, match=r"absolute symlink|escapes the allowed root"):
+    expected_error = (
+        r"Windows junction or reparse point|absolute symlink|escapes the allowed root"
+        if os.name == "nt"
+        else r"absolute symlink|escapes the allowed root"
+    )
+    with pytest.raises(RehearsalError, match=expected_error):
         run_build_plan(plan, confirm_trusted=True)
 
 

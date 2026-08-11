@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import os
+import stat
 from pathlib import Path
+from types import SimpleNamespace
+from typing import cast
 
 import pytest
 
@@ -34,6 +37,32 @@ def _python_package() -> Package:
     )
 
 
+def _fake_stat(
+    *,
+    mode: int = stat.S_IFREG | 0o644,
+    device: int = 7,
+    inode: int = 11,
+    size: int = 5,
+    modified_ns: int = 1_000_000_100,
+    changed_ns: int = 2_000_000_100,
+    file_attributes: int = 0,
+) -> os.stat_result:
+    """Build metadata with Windows-only fields for platform-neutral tests."""
+
+    return cast(
+        os.stat_result,
+        SimpleNamespace(
+            st_mode=mode,
+            st_dev=device,
+            st_ino=inode,
+            st_size=size,
+            st_mtime_ns=modified_ns,
+            st_ctime_ns=changed_ns,
+            st_file_attributes=file_attributes,
+        ),
+    )
+
+
 def test_rooted_reader_accepts_normal_regular_file(tmp_path: Path) -> None:
     _write(tmp_path / "nested/data.txt", "hello")
 
@@ -45,6 +74,54 @@ def test_rooted_reader_accepts_normal_regular_file(tmp_path: Path) -> None:
         assert read_text_file(tmp_path / "nested/data.txt", limit=5) == "hello"
         with pytest.raises(SafeIOError, match="escapes active repository root"):
             read_text_file(tmp_path.parent / "outside.txt", limit=5)
+
+
+def test_cross_view_identity_accepts_windows_metadata_representation_differences() -> None:
+    path_view = _fake_stat(
+        mode=stat.S_IFREG | 0o666,
+        modified_ns=1_000_000_123,
+        changed_ns=2_000_000_123,
+    )
+    descriptor_view = _fake_stat(
+        mode=stat.S_IFREG | 0o600,
+        modified_ns=1_000_000_100,
+        changed_ns=2_000_000_100,
+    )
+
+    safe_io._require_same_file(path_view, descriptor_view, "changed")
+
+
+@pytest.mark.parametrize(
+    ("replacement", "expected_message"),
+    [
+        (_fake_stat(device=8), "changed"),
+        (_fake_stat(inode=12), "changed"),
+        (_fake_stat(mode=stat.S_IFDIR | 0o755), "changed"),
+        (_fake_stat(inode=0), "stable file identity"),
+    ],
+)
+def test_cross_view_identity_rejects_a_different_or_unverifiable_file(
+    replacement: os.stat_result,
+    expected_message: str,
+) -> None:
+    with pytest.raises(SafeIOError, match=expected_message):
+        safe_io._require_same_file(_fake_stat(), replacement, "changed")
+
+
+def test_same_view_stability_still_rejects_content_metadata_changes() -> None:
+    with pytest.raises(SafeIOError, match="changed while read"):
+        safe_io._require_unchanged(
+            _fake_stat(),
+            _fake_stat(modified_ns=1_000_000_200),
+            "changed while read",
+        )
+
+
+def test_windows_reparse_metadata_is_rejected_without_running_on_windows() -> None:
+    reparse = _fake_stat(file_attributes=stat.FILE_ATTRIBUTE_REPARSE_POINT)
+
+    assert safe_io._is_link_or_reparse_point(reparse)
+    assert not safe_io._is_link_or_reparse_point(_fake_stat())
 
 
 def test_rooted_reader_rejects_escape_symlink_nonregular_and_limit(tmp_path: Path) -> None:
