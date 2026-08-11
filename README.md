@@ -207,7 +207,7 @@ jobs:
           python-version: "3.12"
 
       - name: Scan release metadata
-        uses: liyuqin606-del/packrehearsal@__ACTION_COMMIT_SHA__
+        uses: liyuqin606-del/packrehearsal@9c16941169d4559f0d5d589d86cd98141795d2e6
         with:
           root: .
           format: sarif
