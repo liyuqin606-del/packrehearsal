@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "packrehearsal"
-version = "0.1.0"
+version = "1.0.0"
 description = "Audit npm, Python, and Rust release artifacts before publishing."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -12,7 +12,7 @@ license = "Apache-2.0"
 authors = [{ name = "Yuqin Li" }]
 keywords = ["release", "packaging", "supply-chain", "npm", "python", "rust"]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 5 - Production/Stable",
   "Environment :: Console",
   "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3",
@@ -40,6 +40,8 @@ dev = [
 packrehearsal = "packrehearsal.cli:main"
 
 [project.urls]
+Changelog = "https://github.com/liyuqin606-del/packrehearsal/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/liyuqin606-del/packrehearsal#readme"
 Homepage = "https://github.com/liyuqin606-del/packrehearsal"
 Issues = "https://github.com/liyuqin606-del/packrehearsal/issues"
 Repository = "https://github.com/liyuqin606-del/packrehearsal"

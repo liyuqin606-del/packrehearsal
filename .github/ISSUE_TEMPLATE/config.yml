@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private security report
+    url: https://github.com/liyuqin606-del/packrehearsal/security/advisories/new
+    about: Report vulnerabilities privately; never post credentials or exploit details publicly.
+  - name: Usage question
+    url: https://github.com/liyuqin606-del/packrehearsal/discussions/new?category=q-a
+    about: Ask how to interpret findings or integrate PackRehearsal into a release workflow.

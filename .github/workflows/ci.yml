@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   quality:
+    name: Quality
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -26,13 +27,17 @@ jobs:
         with:
           python-version: "3.12"
       - name: Set up uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
-          version: "0.11.12"
+          version: "0.12.4"
           enable-cache: true
           cache-dependency-glob: uv.lock
       - name: Sync locked development environment
         run: uv sync --frozen --extra dev
+      - name: Verify lock and formatting
+        run: |
+          uv lock --check
+          uv run ruff format --check .
       - name: Lint
         run: uv run ruff check .
       - name: Type check
@@ -43,6 +48,7 @@ jobs:
         run: uv run packrehearsal scan . --format json --output packrehearsal-report.json
 
   tests:
+    name: Tests (${{ matrix.os }}, Python ${{ matrix.python }})
     needs: quality
     timeout-minutes: 20
     strategy:
@@ -61,17 +67,22 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - name: Set up uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
-          version: "0.11.12"
+          version: "0.12.4"
           enable-cache: true
           cache-dependency-glob: uv.lock
       - name: Sync locked test environment
-        run: uv sync --frozen --extra dev --python "${{ matrix.python }}"
+        env:
+          MATRIX_PYTHON: ${{ matrix.python }}
+        run: uv sync --frozen --extra dev --python "$MATRIX_PYTHON"
       - name: Run tests
-        run: uv run --python "${{ matrix.python }}" pytest
+        env:
+          MATRIX_PYTHON: ${{ matrix.python }}
+        run: uv run --python "$MATRIX_PYTHON" pytest
 
   package:
+    name: Package
     needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -85,9 +96,9 @@ jobs:
         with:
           python-version: "3.12"
       - name: Set up uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
-          version: "0.11.12"
+          version: "0.12.4"
           enable-cache: true
           cache-dependency-glob: uv.lock
       - name: Sync locked build environment
@@ -103,6 +114,15 @@ jobs:
             --artifact dist/*.tar.gz \
             --format json \
             --output release-report.json
+      - name: Verify clean wheel installation
+        run: |
+          uv venv --python 3.12 .release-venv
+          uv pip install --python .release-venv/bin/python dist/*.whl
+          .release-venv/bin/packrehearsal --version
+          .release-venv/bin/packrehearsal scan . \
+            --no-repo-config \
+            --format json \
+            --output installed-release-report.json
       - name: Upload distributions and reports
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -112,5 +132,6 @@ jobs:
             wheel-report.json
             sdist-report.json
             release-report.json
+            installed-release-report.json
           if-no-files-found: error
           retention-days: 14

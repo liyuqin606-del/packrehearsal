@@ -14,6 +14,8 @@ from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from typing import Any
 
+from packrehearsal._version import __version__
+
 
 class Severity(StrEnum):
     """Finding severity ordered from informational to release blocking."""
@@ -252,7 +254,7 @@ class ScanReport:
     packages: tuple[Package, ...]
     findings: tuple[Finding, ...]
     artifacts: tuple[ArtifactSnapshot, ...] = ()
-    tool_version: str = "0.1.0"
+    tool_version: str = __version__
     schema_version: str = "1"
     baseline_fingerprints: tuple[str, ...] = ()
     metadata: Mapping[str, Any] = field(default_factory=dict, compare=False, hash=False)

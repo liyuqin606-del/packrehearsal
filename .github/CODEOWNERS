@@ -1,0 +1,10 @@
+# The founding maintainer reviews every change while the project is single-maintainer.
+* @liyuqin606-del
+
+# These paths define release and security boundaries and always require owner review.
+/.github/workflows/ @liyuqin606-del
+/action.yml @liyuqin606-del
+/schemas/ @liyuqin606-del
+/src/packrehearsal/artifacts/ @liyuqin606-del
+/src/packrehearsal/receipt.py @liyuqin606-del
+/src/packrehearsal/safe_io.py @liyuqin606-del

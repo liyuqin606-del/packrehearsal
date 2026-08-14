@@ -24,8 +24,16 @@ discussion.
 ## Releases
 
 Only maintainers may publish packages or tags. A release requires passing CI,
-an updated changelog, a PackRehearsal self-scan, and a signed or checksummed
-evidence receipt when release infrastructure supports it.
+an updated changelog, a PackRehearsal self-scan, a clean installation check,
+checksums, and GitHub build-provenance attestations. The tag workflow builds and
+publishes assets so release bytes remain tied to reviewed source.
+
+## Compatibility
+
+For 1.x, documented CLI commands and exit codes, schema version 1, and published
+rule IDs are stable. Security hardening, false-positive fixes, and additive
+rules may ship in minor or patch releases. Breaking public behavior requires a
+new major version and a changelog migration note.
 
 ## Conflicts of interest
 

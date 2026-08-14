@@ -22,9 +22,10 @@ another material release risk.
 
 ```bash
 uv sync --extra dev
+uv run ruff format --check .
 uv run ruff check .
-uv run mypy
-uv run pytest --cov
+uv run mypy src/packrehearsal
+uv run pytest --cov=packrehearsal --cov-branch
 ```
 
 Tests must not access public registries. Use small, reviewable fixtures assembled
@@ -39,6 +40,8 @@ archives, copied private repositories, or generated dependency directories.
 - documentation for user-visible behavior;
 - a threat-model note when the change reads archives or executes tools;
 - no weakening of static-mode safety defaults.
+- no undocumented breaking change to the 1.x CLI, exit codes, v1 schemas, or
+  published rule IDs.
 
 Human maintainers review and merge every change. AI-generated code is welcome
 only when the contributor understands it, can explain it, and has verified its
@@ -46,5 +49,5 @@ license and behavior.
 
 ## Adding an ecosystem
 
-New ecosystems are intentionally out of scope for v0.1. A proposal needs at
+New ecosystems are intentionally out of scope for v1.0 maintenance. A proposal needs at
 least two external maintainers willing to test fixtures and review the rules.

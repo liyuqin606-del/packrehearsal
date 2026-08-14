@@ -2,7 +2,8 @@
 
 ## Supported versions
 
-Until v1.0, only the latest tagged minor release receives security fixes.
+Only the latest 1.x release receives security fixes. A confirmed vulnerability
+that affects an older 1.x release will be documented in the advisory.
 
 ## Report privately
 
@@ -27,3 +28,10 @@ Static scan mode must not execute project code, access registries, or extract
 archives. Trusted rehearsal is an explicit code-execution boundary and is safe
 only for repositories and revisions the operator already trusts. See
 [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
+
+## Automated checks
+
+Every pull request runs the cross-platform test matrix, static self-scan, and
+CodeQL. Tagged releases additionally inspect both distributions, verify a clean
+wheel installation, publish SHA-256 checksums, and create GitHub provenance
+attestations. Automated checks supplement rather than replace human review.
