@@ -5,6 +5,11 @@ Semantic Versioning after the first public release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Release provenance now uses the checksum manifest as the exact subject list,
+  preventing a trailing multiline-glob entry from attesting an unrelated file.
+
 ## [1.0.0] - 2026-08-14
 
 ### Added
