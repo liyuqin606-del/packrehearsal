@@ -1,6 +1,7 @@
 # PackRehearsal
 
 [![CI](https://github.com/liyuqin606-del/packrehearsal/actions/workflows/ci.yml/badge.svg)](https://github.com/liyuqin606-del/packrehearsal/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/liyuqin606-del/packrehearsal/actions/workflows/codeql.yml/badge.svg)](https://github.com/liyuqin606-del/packrehearsal/actions/workflows/codeql.yml)
 [![GitHub release](https://img.shields.io/github/v/release/liyuqin606-del/packrehearsal?display_name=tag)](https://github.com/liyuqin606-del/packrehearsal/releases)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://www.python.org/)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-2E8B57.svg)](LICENSE)
@@ -14,16 +15,18 @@ then emits deterministic findings, SARIF, baselines, and content-addressed
 receipts. The default scan does not execute project code, contact a registry,
 or extract an archive.
 
-> PackRehearsal v0.1 is alpha software. Interfaces may change before v1.0.
+PackRehearsal 1.x is stable. CLI commands and exit codes, report and receipt
+schema v1, and published rule IDs follow the compatibility policy below;
+intentional breaking changes require a new major version.
 
 ## Quick start
 
-Python 3.11 or newer is required. Until a PyPI release is available, install
-the tagged source directly from GitHub:
+Python 3.11 or newer is required. Install the immutable wheel attached to the
+GitHub release:
 
 ```bash
 python -m pip install \
-  "packrehearsal @ git+https://github.com/liyuqin606-del/packrehearsal.git@v0.1.0"
+  "https://github.com/liyuqin606-del/packrehearsal/releases/download/v1.0.0/packrehearsal-1.0.0-py3-none-any.whl"
 
 packrehearsal scan .
 ```
@@ -32,7 +35,7 @@ The repository dogfoods its own static scan. The checked-in
 [example report](examples/self-scan.json) currently renders as:
 
 ```text
-PackRehearsal 0.1.0
+PackRehearsal 1.0.0
 root: .
 packages: 1  artifacts: 0  findings: 0
 
@@ -78,6 +81,14 @@ See the [rule catalog](docs/RULES.md) for the executable rule families.
 
 Receipts bind report and artifact hashes and can be verified offline. They are
 unsigned self-consistency evidence—not proof of authorship or package safety.
+
+Every v1 release includes SHA-256 checksums and GitHub build-provenance
+attestations generated from the tagged source. After downloading an asset:
+
+```bash
+gh attestation verify packrehearsal-1.0.0-py3-none-any.whl \
+  --repo liyuqin606-del/packrehearsal
+```
 
 `packrehearsal rehearse` is a separate trusted-code boundary. Package builders
 can execute arbitrary project code, so rehearsal requires an explicit
@@ -147,7 +158,7 @@ boundary explicitly:
 
 ```bash
 python -m pip install \
-  "packrehearsal[rehearsal] @ git+https://github.com/liyuqin606-del/packrehearsal.git@v0.1.0"
+  "packrehearsal[rehearsal] @ https://github.com/liyuqin606-del/packrehearsal/releases/download/v1.0.0/packrehearsal-1.0.0-py3-none-any.whl"
 
 packrehearsal rehearse . --trusted-rehearsal
 ```
@@ -207,7 +218,7 @@ jobs:
           python-version: "3.12"
 
       - name: Scan release metadata
-        uses: liyuqin606-del/packrehearsal@a19188984efeb70be363f2864013a79cd99c6e39
+        uses: liyuqin606-del/packrehearsal@238d663e6f0f0b5e305d7d5c3b3c1c41bfa62015
         with:
           root: .
           format: sarif
@@ -244,19 +255,29 @@ The test suite is offline and covers archive bounds, symlink/TOCTOU defenses,
 workspace discovery, trusted-build resource limits, rule behavior, reporters,
 baselines, and receipts.
 
-## Project status
+## Stability and roadmap
 
-- **v0.1:** discovery, archive inspection, rules, reporters, baselines, receipts,
-  and an explicit trusted-rehearsal boundary;
-- **v0.2:** expand real-world fixture coverage and monorepo dependency evidence;
-- **v0.3:** explore opt-in clean-environment smoke tests for trusted branches;
-- **later:** features justified by public issues and maintainer feedback.
+Version 1.0 stabilizes discovery, archive inspection, rule findings, reporters,
+baselines, receipts, and the trusted-rehearsal boundary. Patch releases may add
+rules or harden parsers without changing documented command semantics. New
+required arguments, removal of public commands or rule IDs, incompatible schema
+changes, and weaker safety defaults are reserved for a new major version.
+
+Future work is driven by reproducible public issues: more real-world fixtures,
+additional monorepo dependency evidence, and opt-in clean-environment smoke
+tests for trusted branches. New ecosystems require maintainer feedback before
+implementation.
+
+The precise 1.x guarantees and intentionally unstable surfaces are documented
+in the [compatibility policy](docs/COMPATIBILITY.md).
 
 ## Contributing and security
 
 - [Contributing guide](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 - [Governance](GOVERNANCE.md)
+- [Compatibility policy](docs/COMPATIBILITY.md)
+- [Support](SUPPORT.md)
 - [Threat model](docs/THREAT_MODEL.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Rule catalog](docs/RULES.md)

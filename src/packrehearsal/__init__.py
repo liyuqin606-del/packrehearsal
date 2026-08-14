@@ -1,6 +1,6 @@
 """PackRehearsal public package API."""
 
+from packrehearsal._version import __version__
 from packrehearsal.models import Ecosystem, Finding, Package, ScanReport, Severity
 
-__all__ = ["Ecosystem", "Finding", "Package", "ScanReport", "Severity"]
-__version__ = "0.1.0"
+__all__ = ["Ecosystem", "Finding", "Package", "ScanReport", "Severity", "__version__"]

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+from packrehearsal import __version__
 from packrehearsal.models import (
     Ecosystem,
     Evidence,
@@ -10,6 +11,11 @@ from packrehearsal.models import (
     ScanReport,
     Severity,
 )
+
+
+def test_scan_report_uses_public_package_version() -> None:
+    report = ScanReport(root=".", packages=(), findings=())
+    assert report.tool_version == __version__
 
 
 def test_finding_fingerprint_is_stable_and_scope_sensitive() -> None:

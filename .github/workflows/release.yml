@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build, attest, and publish
+    if: github.repository == 'liyuqin606-del/packrehearsal'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      attestations: write # Store provenance for every published asset.
+      contents: write # Create the GitHub release and upload its assets.
+      id-token: write # Sign provenance with GitHub's OIDC identity.
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+        with:
+          version: "0.12.4"
+          enable-cache: false
+
+      - name: Sync locked release environment
+        run: uv sync --frozen --extra dev
+
+      - name: Verify tag and package versions agree
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          uv run python - <<'PY'
+          import os
+          import tomllib
+          from pathlib import Path
+
+          from packrehearsal import __version__
+
+          project_version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
+          expected_tag = f"v{project_version}"
+          actual_tag = os.environ["RELEASE_TAG"]
+          if __version__ != project_version or actual_tag != expected_tag:
+              raise SystemExit(
+                  f"version mismatch: runtime={__version__}, project={project_version}, "
+                  f"tag={actual_tag}, expected={expected_tag}"
+              )
+          PY
+
+      - name: Run release quality gate
+        run: |
+          uv lock --check
+          uv run ruff format --check .
+          uv run ruff check .
+          uv run mypy src/packrehearsal
+          uv run pytest --cov=packrehearsal --cov-branch --cov-report=term
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Inspect distributions
+        run: |
+          uv run packrehearsal inspect dist/*.whl --format json --output wheel-report.json
+          uv run packrehearsal inspect dist/*.tar.gz --format json --output sdist-report.json
+          uv run packrehearsal scan . \
+            --artifact dist/*.whl \
+            --artifact dist/*.tar.gz \
+            --format json \
+            --output release-report.json
+
+      - name: Verify clean wheel installation
+        run: |
+          uv venv --python 3.12 .release-venv
+          uv pip install --python .release-venv/bin/python dist/*.whl
+          .release-venv/bin/packrehearsal --version
+          .release-venv/bin/packrehearsal scan . \
+            --no-repo-config \
+            --format json \
+            --output installed-release-report.json
+
+      - name: Write release checksums
+        run: |
+          (cd dist && sha256sum *) > SHA256SUMS.txt
+          sha256sum wheel-report.json sdist-report.json release-report.json \
+            installed-release-report.json >> SHA256SUMS.txt
+
+      - name: Attest release provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/*
+            wheel-report.json
+            sdist-report.json
+            release-report.json
+            installed-release-report.json
+
+      - name: Create or repair GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          assets=(
+            dist/*
+            SHA256SUMS.txt
+            wheel-report.json
+            sdist-report.json
+            release-report.json
+            installed-release-report.json
+          )
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${assets[@]}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "PackRehearsal $GITHUB_REF_NAME" \
+              --generate-notes \
+              --verify-tag
+          fi

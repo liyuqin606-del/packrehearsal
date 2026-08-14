@@ -42,7 +42,8 @@ padding.
 
 ## Constraints
 
-- Three ecosystems only for v0.1.
+- The initial implementation deliberately supports only three ecosystems; v1.0
+  retains that boundary until real maintainer evidence justifies another.
 - Static mode is useful with no API key or network.
 - No registry publishing, credential storage, hosted dashboard, telemetry, or
   automatic GitHub writes.
