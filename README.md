@@ -258,12 +258,22 @@ jobs:
           python-version: "3.12"
 
       - name: Scan release metadata
-        uses: liyuqin606-del/packrehearsal@238d663e6f0f0b5e305d7d5c3b3c1c41bfa62015
+        uses: liyuqin606-del/packrehearsal@a94d39c32da5ac698d28c5a84e74e65e699f81db
         with:
           root: .
           format: sarif
           output: packrehearsal.sarif
           fail-on: high
+          codex-output: codex-maintenance-task.json
+
+      - name: Retain the Codex maintenance task
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: codex-maintenance-task
+          path: codex-maintenance-task.json
+          if-no-files-found: warn
+          retention-days: 7
 ```
 
 Do not run trusted rehearsal on `pull_request_target` or on unreviewed fork
