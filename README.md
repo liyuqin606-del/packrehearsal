@@ -6,18 +6,20 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://www.python.org/)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-2E8B57.svg)](LICENSE)
 
-**Catch missing files, metadata drift, and accidental payloads in npm, Python,
-and Rust packages before publishing them.**
+**Turn release evidence into a bounded Codex maintenance task before an npm,
+Python, or Rust package is published.**
 
 PackRehearsal is a local-first, zero-runtime-dependency release assurance CLI.
 It compares package manifests with the archive bytes that will actually ship,
-then emits deterministic findings, SARIF, baselines, and content-addressed
-receipts. The default scan does not execute project code, contact a registry,
-or extract an archive.
+then emits deterministic findings, SARIF, baselines, receipts, and
+evidence-bounded work orders for Codex. The scanner—not a model—defines the
+finding scope and verification command. The default path does not execute
+project code, call an OpenAI API, contact a registry, or extract an archive.
 
-PackRehearsal 1.x is stable. CLI commands and exit codes, report and receipt
-schema v1, and published rule IDs follow the compatibility policy below;
-intentional breaking changes require a new major version.
+PackRehearsal 1.x is stable. CLI commands and exit codes; report, Codex task,
+baseline, and receipt schemas v1; and published rule IDs follow the
+compatibility policy below. Intentional breaking changes require a new major
+version.
 
 ## Quick start
 
@@ -26,16 +28,17 @@ GitHub release:
 
 ```bash
 python -m pip install \
-  "https://github.com/liyuqin606-del/packrehearsal/releases/download/v1.0.0/packrehearsal-1.0.0-py3-none-any.whl"
+  "https://github.com/liyuqin606-del/packrehearsal/releases/download/v1.1.0/packrehearsal-1.1.0-py3-none-any.whl"
 
 packrehearsal scan .
+packrehearsal codex-brief . --output codex-maintenance-brief.md
 ```
 
 The repository dogfoods its own static scan. The checked-in
 [example report](examples/self-scan.json) currently renders as:
 
 ```text
-PackRehearsal 1.0.0
+PackRehearsal 1.1.0
 root: .
 packages: 1  artifacts: 0  findings: 0
 
@@ -67,6 +70,31 @@ Every finding includes a stable rule ID, severity, package/location, supporting
 evidence, remediation, and a fingerprint suitable for reviewable baselines.
 See the [rule catalog](docs/RULES.md) for the executable rule families.
 
+## Codex maintenance loop
+
+`codex-brief` turns only new, in-scope findings into a deterministic Markdown
+or JSON task:
+
+```bash
+packrehearsal codex-brief . \
+  --artifact dist/example-1.2.3-py3-none-any.whl \
+  --minimum-severity low \
+  --format json \
+  --output codex-maintenance-task.json
+```
+
+The task carries a content-derived task ID, originating scan ID, artifact
+hashes, exact finding fingerprints, remediation, guardrails, and a verification
+command. Repository-derived text is marked as untrusted data. Codex is told not
+to execute project code, weaken policy, make unrelated edits, merge, or release.
+If there are no selected findings, the task explicitly says **do not invent
+work**.
+
+No API key is required: PackRehearsal produces the evidence bundle, while the
+maintainer decides whether and where to give it to Codex. See the complete
+[Codex maintainer workflow](docs/CODEX_WORKFLOW.md) and repository-native
+[`AGENTS.md`](AGENTS.md).
+
 ## Safe by default
 
 `packrehearsal scan` is deliberately static:
@@ -86,7 +114,7 @@ Every v1 release includes SHA-256 checksums and GitHub build-provenance
 attestations generated from the tagged source. After downloading an asset:
 
 ```bash
-gh attestation verify packrehearsal-1.0.0-py3-none-any.whl \
+gh attestation verify packrehearsal-1.1.0-py3-none-any.whl \
   --repo liyuqin606-del/packrehearsal
 ```
 
@@ -128,6 +156,17 @@ packrehearsal scan . --format markdown --output report.md
 packrehearsal scan . --format sarif --output report.sarif
 ```
 
+### Generate a Codex work order
+
+```bash
+packrehearsal codex-brief . --format markdown --output codex-brief.md
+packrehearsal codex-brief . --format json --output codex-task.json
+```
+
+`codex-brief` always exits zero after a successful scan because its job is to
+write a task, not apply the normal finding gate. Findings remain unchanged and
+continue to control `packrehearsal scan` exit status.
+
 ### Baseline existing findings
 
 ```bash
@@ -158,7 +197,7 @@ boundary explicitly:
 
 ```bash
 python -m pip install \
-  "packrehearsal[rehearsal] @ https://github.com/liyuqin606-del/packrehearsal/releases/download/v1.0.0/packrehearsal-1.0.0-py3-none-any.whl"
+  "packrehearsal[rehearsal] @ https://github.com/liyuqin606-del/packrehearsal/releases/download/v1.1.0/packrehearsal-1.1.0-py3-none-any.whl"
 
 packrehearsal rehearse . --trusted-rehearsal
 ```
@@ -191,7 +230,8 @@ CI must ignore configuration supplied by the checked-out revision.
 
 The composite action runs only the static path, imports itself in Python
 isolated mode, ignores repository configuration, and has no install-time
-dependency step. Pin it to a reviewed full commit SHA:
+dependency step. Its optional `codex-output` input emits a JSON maintenance task
+before the normal finding gate. Pin the Action to a reviewed full commit SHA:
 
 ```yaml
 name: PackRehearsal
@@ -234,7 +274,7 @@ base-revision checkout rather than the proposed revision.
 
 | Code | Meaning |
 |---:|---|
-| `0` | Scan completed and no new finding met the failure threshold |
+| `0` | Command completed; for `scan`, no new finding met the failure threshold |
 | `1` | A new finding met the configured severity threshold |
 | `2` | Invalid arguments, configuration, or unsafe input |
 | `3` | Trusted rehearsal failed, exceeded a resource bound, or timed out |
@@ -249,19 +289,21 @@ uv run ruff check .
 uv run mypy src/packrehearsal
 uv run pytest --cov=packrehearsal --cov-branch
 uv run packrehearsal scan .
+uv run packrehearsal codex-brief . --format json --output /tmp/codex-task.json
 ```
 
 The test suite is offline and covers archive bounds, symlink/TOCTOU defenses,
 workspace discovery, trusted-build resource limits, rule behavior, reporters,
-baselines, and receipts.
+Codex task injection boundaries, baselines, and receipts.
 
 ## Stability and roadmap
 
-Version 1.0 stabilizes discovery, archive inspection, rule findings, reporters,
-baselines, receipts, and the trusted-rehearsal boundary. Patch releases may add
-rules or harden parsers without changing documented command semantics. New
-required arguments, removal of public commands or rule IDs, incompatible schema
-changes, and weaker safety defaults are reserved for a new major version.
+Version 1.1 adds the stable Codex task schema and repository-native maintainer
+workflow to the 1.x discovery, archive inspection, rules, reporters, baselines,
+receipts, and trusted-rehearsal boundary. Patch releases may add rules or harden
+parsers without changing documented command semantics. New required arguments,
+removal of public commands or rule IDs, incompatible schema changes, and weaker
+safety defaults are reserved for a new major version.
 
 Future work is driven by reproducible public issues: more real-world fixtures,
 additional monorepo dependency evidence, and opt-in clean-environment smoke
@@ -281,6 +323,10 @@ in the [compatibility policy](docs/COMPATIBILITY.md).
 - [Threat model](docs/THREAT_MODEL.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Rule catalog](docs/RULES.md)
+- [Codex workflow](docs/CODEX_WORKFLOW.md)
 
 Security-sensitive reports should use GitHub private vulnerability reporting.
 PackRehearsal is licensed under [Apache-2.0](LICENSE).
+
+PackRehearsal is community-maintained and is not affiliated with or endorsed by
+OpenAI. Codex and OpenAI are trademarks of their respective owner.

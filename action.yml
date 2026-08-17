@@ -1,5 +1,5 @@
 name: PackRehearsal
-description: Audit release metadata and candidate package artifacts before publishing.
+description: Audit release artifacts and generate bounded Codex maintenance tasks.
 author: Yuqin Li
 
 branding:
@@ -22,6 +22,9 @@ inputs:
   baseline:
     description: Optional baseline path; rejected for pull-request events.
     default: ""
+  codex-output:
+    description: Optional path for a JSON Codex maintenance task; empty disables it.
+    default: ""
 
 runs:
   using: composite
@@ -31,6 +34,7 @@ runs:
       env:
         ACTION_PATH: ${{ github.action_path }}
         PR_BASELINE: ${{ inputs.baseline }}
+        PR_CODEX_OUTPUT: ${{ inputs['codex-output'] }}
         PR_EVENT_NAME: ${{ github.event_name }}
         PR_FAIL_ON: ${{ inputs['fail-on'] }}
         PR_FORMAT: ${{ inputs.format }}
@@ -38,16 +42,35 @@ runs:
         PR_ROOT: ${{ inputs.root }}
       run: |
         set -euo pipefail
-        args=(scan "$PR_ROOT" --no-repo-config --format "$PR_FORMAT" --fail-on "$PR_FAIL_ON")
-        if [[ -n "$PR_OUTPUT" ]]; then
-          args+=(--output "$PR_OUTPUT")
-        fi
+        baseline_args=()
         if [[ -n "$PR_BASELINE" ]]; then
           if [[ "$PR_EVENT_NAME" == "pull_request" || "$PR_EVENT_NAME" == "pull_request_target" || "$PR_EVENT_NAME" == "merge_group" ]]; then
             echo "::error::Repository baselines are rejected on pull-request and merge-group events because the proposed revision can suppress its own findings."
             exit 2
           fi
-          args+=(--baseline "$PR_BASELINE")
+          baseline_args+=(--baseline "$PR_BASELINE")
+        fi
+        if [[ -n "$PR_CODEX_OUTPUT" ]]; then
+          codex_args=(
+            codex-brief "$PR_ROOT"
+            --no-repo-config
+            --format json
+            --minimum-severity "$PR_FAIL_ON"
+            --output "$PR_CODEX_OUTPUT"
+            "${baseline_args[@]}"
+          )
+          python -I -c 'import runpy,sys; sys.path.insert(0,sys.argv.pop(1)); runpy.run_module("packrehearsal",run_name="__main__")' \
+            "$ACTION_PATH/src" "${codex_args[@]}"
+        fi
+        args=(
+          scan "$PR_ROOT"
+          --no-repo-config
+          --format "$PR_FORMAT"
+          --fail-on "$PR_FAIL_ON"
+          "${baseline_args[@]}"
+        )
+        if [[ -n "$PR_OUTPUT" ]]; then
+          args+=(--output "$PR_OUTPUT")
         fi
         python -I -c 'import runpy,sys; sys.path.insert(0,sys.argv.pop(1)); runpy.run_module("packrehearsal",run_name="__main__")' \
           "$ACTION_PATH/src" "${args[@]}"

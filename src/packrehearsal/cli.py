@@ -21,6 +21,7 @@ from packrehearsal.artifacts import (
     run_build_plan,
 )
 from packrehearsal.baseline import load_baseline, save_baseline
+from packrehearsal.codex import render_codex_json, render_codex_markdown
 from packrehearsal.config import (
     Config,
     default_config_dict,
@@ -53,6 +54,13 @@ def build_parser() -> argparse.ArgumentParser:
     scan = subparsers.add_parser("scan", help="run the safe static repository scan")
     _add_scan_arguments(scan)
     scan.set_defaults(handler=_handle_scan)
+
+    codex_brief = subparsers.add_parser(
+        "codex-brief",
+        help="turn new static findings into an evidence-bounded Codex maintenance task",
+    )
+    _add_codex_brief_arguments(codex_brief)
+    codex_brief.set_defaults(handler=_handle_codex_brief)
 
     inspect = subparsers.add_parser(
         "inspect", help="produce a bounded structural snapshot of an artifact"
@@ -120,6 +128,26 @@ def _add_scan_arguments(parser: argparse.ArgumentParser) -> None:
     _add_report_arguments(parser, formats=("console", "json", "markdown", "sarif"))
 
 
+def _add_codex_brief_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("root", nargs="?", type=Path, default=Path("."))
+    parser.add_argument("--artifact", action="append", default=[], type=Path)
+    parser.add_argument("--baseline", type=Path)
+    parser.add_argument("--config", type=Path)
+    parser.add_argument(
+        "--no-repo-config",
+        action="store_true",
+        help="ignore repository configuration and use built-in safety policy",
+    )
+    parser.add_argument(
+        "--minimum-severity",
+        choices=[item.value for item in Severity],
+        default=Severity.INFO.value,
+        help="include new findings at or above this severity (default: info)",
+    )
+    parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    parser.add_argument("--output", type=Path)
+
+
 def _add_report_arguments(
     parser: argparse.ArgumentParser,
     *,
@@ -166,6 +194,43 @@ def _handle_scan(arguments: argparse.Namespace) -> int:
     if arguments.no_fail:
         return EXIT_OK
     return EXIT_FINDINGS if report.should_fail(config.fail_on, new_only=True) else EXIT_OK
+
+
+def _handle_codex_brief(arguments: argparse.Namespace) -> int:
+    root = arguments.root.expanduser().resolve()
+    _validate_codex_inputs_are_portable(root, arguments)
+    config = _resolved_config(
+        root,
+        arguments.config,
+        None,
+        no_repo_config=arguments.no_repo_config,
+    )
+    baseline = load_baseline(arguments.baseline) if arguments.baseline else ()
+    report = scan_repository(
+        root,
+        config=config,
+        artifact_paths=arguments.artifact,
+        baseline_fingerprints=baseline,
+    )
+    verification_command = _codex_verification_command(arguments, root)
+    minimum_severity = Severity.parse(arguments.minimum_severity)
+    if arguments.format == "json":
+        content = render_codex_json(
+            report,
+            minimum_severity=minimum_severity,
+            verification_command=verification_command,
+        )
+    else:
+        content = render_codex_markdown(
+            report,
+            minimum_severity=minimum_severity,
+            verification_command=verification_command,
+        )
+    if arguments.output is None:
+        print(content, end="")
+    else:
+        atomic_write_text(arguments.output, content)
+    return EXIT_OK
 
 
 def _handle_inspect(arguments: argparse.Namespace) -> int:
@@ -291,6 +356,48 @@ def _resolved_config(
     if fail_on is not None:
         config = replace(config, fail_on=Severity.parse(fail_on))
     return config
+
+
+def _codex_verification_command(
+    arguments: argparse.Namespace,
+    root: Path,
+) -> str:
+    command = ["packrehearsal", "scan", "."]
+    for artifact in arguments.artifact:
+        command.extend(("--artifact", _repository_relative_path(artifact, root)))
+    if arguments.baseline is not None:
+        command.extend(("--baseline", _repository_relative_path(arguments.baseline, root)))
+    if arguments.no_repo_config:
+        command.append("--no-repo-config")
+    elif arguments.config is not None:
+        command.extend(("--config", _repository_relative_path(arguments.config, root)))
+    command.extend(("--format", "json", "--no-fail"))
+    return shlex.join(command)
+
+
+def _validate_codex_inputs_are_portable(
+    root: Path,
+    arguments: argparse.Namespace,
+) -> None:
+    paths = [*arguments.artifact]
+    if arguments.baseline is not None:
+        paths.append(arguments.baseline)
+    if arguments.config is not None:
+        paths.append(arguments.config)
+    for path in paths:
+        _repository_relative_path(path, root)
+
+
+def _repository_relative_path(path: Path, root: Path) -> str:
+    candidate = path.expanduser()
+    if not candidate.is_absolute():
+        candidate = root / candidate
+    try:
+        return candidate.resolve(strict=False).relative_to(root).as_posix()
+    except ValueError as exc:
+        raise ValueError(
+            f"Codex brief inputs must be inside the repository for a portable task: {path}"
+        ) from exc
 
 
 def _emit_report(report: ScanReport, arguments: argparse.Namespace) -> None:

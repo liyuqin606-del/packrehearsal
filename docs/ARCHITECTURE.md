@@ -18,7 +18,8 @@ Package + Snapshot + Config
                                       ├── deterministic JSON
                                       ├── Markdown
                                       ├── SARIF
-                                      └── evidence receipt
+                                      ├── evidence receipt
+                                      └── bounded Codex task
 ```
 
 ## Layers
@@ -54,6 +55,14 @@ not hidden scoring.
 JSON and SARIF use sorted keys and paths. A scan ID hashes deterministic report
 content. Receipts add an explicit timestamp, report hash, artifact hashes, and a
 self-hash; timestamp-bearing receipts are intentionally not byte-stable.
+
+### Codex tasks
+
+`codex-brief` filters only new findings at a chosen severity and packages them
+as deterministic JSON or reviewable Markdown. The task carries a content hash,
+the originating scan ID, untrusted-data policy, editing constraints, and a
+verification command. It calls no model and grants no merge or release
+authority.
 
 ## Non-goals
 

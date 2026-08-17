@@ -45,7 +45,11 @@ jobs:
       - name: Test with branch coverage
         run: uv run pytest --cov=packrehearsal --cov-branch --cov-report=term
       - name: Dogfood the safe static scan
-        run: uv run packrehearsal scan . --format json --output packrehearsal-report.json
+        run: |
+          uv run packrehearsal scan . --format json --output packrehearsal-report.json
+          uv run packrehearsal codex-brief . \
+            --format json \
+            --output codex-maintenance-task.json
 
   tests:
     name: Tests (${{ matrix.os }}, Python ${{ matrix.python }})
@@ -114,6 +118,11 @@ jobs:
             --artifact dist/*.tar.gz \
             --format json \
             --output release-report.json
+          uv run packrehearsal codex-brief . \
+            --artifact dist/*.whl \
+            --artifact dist/*.tar.gz \
+            --format json \
+            --output codex-release-task.json
       - name: Verify clean wheel installation
         run: |
           uv venv --python 3.12 .release-venv
@@ -133,5 +142,6 @@ jobs:
             sdist-report.json
             release-report.json
             installed-release-report.json
+            codex-release-task.json
           if-no-files-found: error
           retention-days: 14

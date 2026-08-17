@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/liyuqin606-del/packrehearsal/schemas/codex-task-v1.schema.json",
+  "title": "PackRehearsal Codex maintenance task v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifacts",
+    "constraints",
+    "findings",
+    "minimum_severity",
+    "objective",
+    "packages",
+    "scan_id",
+    "schema_version",
+    "status",
+    "summary",
+    "task_id",
+    "tool",
+    "tool_version",
+    "untrusted_data_policy",
+    "verification"
+  ],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "tool": { "const": "packrehearsal" },
+    "tool_version": { "type": "string", "minLength": 1 },
+    "task_id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "scan_id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "status": { "enum": ["changes_requested", "no_changes_requested"] },
+    "minimum_severity": {
+      "enum": ["critical", "high", "medium", "low", "info"]
+    },
+    "objective": { "type": "string", "minLength": 1 },
+    "untrusted_data_policy": { "type": "string", "minLength": 1 },
+    "constraints": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_count",
+        "finding_counts",
+        "package_count",
+        "selected_finding_count"
+      ],
+      "properties": {
+        "artifact_count": { "type": "integer", "minimum": 0 },
+        "package_count": { "type": "integer", "minimum": 0 },
+        "selected_finding_count": { "type": "integer", "minimum": 0 },
+        "finding_counts": { "$ref": "#/$defs/counts" }
+      }
+    },
+    "packages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/package" }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/artifact" }
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    },
+    "verification": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/verification" }
+    }
+  },
+  "$defs": {
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["critical", "high", "info", "low", "medium"],
+      "properties": {
+        "critical": { "type": "integer", "minimum": 0 },
+        "high": { "type": "integer", "minimum": 0 },
+        "medium": { "type": "integer", "minimum": 0 },
+        "low": { "type": "integer", "minimum": 0 },
+        "info": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ecosystem", "manifest", "name", "root", "version"],
+      "properties": {
+        "ecosystem": { "enum": ["npm", "python", "rust"] },
+        "manifest": { "type": "string" },
+        "name": { "type": "string", "minLength": 1 },
+        "root": { "type": "string" },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "path", "sha256", "size"],
+      "properties": {
+        "format": { "type": "string", "minLength": 1 },
+        "path": { "type": "string" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "size": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fingerprint",
+        "message",
+        "remediation",
+        "rule_id",
+        "severity",
+        "title"
+      ],
+      "properties": {
+        "rule_id": { "type": "string", "minLength": 1 },
+        "severity": { "enum": ["critical", "high", "medium", "low", "info"] },
+        "title": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 },
+        "remediation": { "type": "string", "minLength": 1 },
+        "package": { "type": "string" },
+        "location": { "type": "string" },
+        "fingerprint": { "type": "string", "pattern": "^[0-9a-f]{24}$" },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "value"],
+            "properties": {
+              "key": { "type": "string" },
+              "value": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value"],
+      "properties": {
+        "kind": { "enum": ["assertion", "command", "instruction"] },
+        "value": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
