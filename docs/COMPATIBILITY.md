@@ -5,7 +5,7 @@ PackRehearsal follows Semantic Versioning from 1.0.0 onward.
 ## Stable throughout 1.x
 
 - documented CLI command names, required arguments, and exit-code meanings;
-- report, baseline, and receipt schema version 1;
+- report, Codex task, baseline, and receipt schema version 1;
 - published rule IDs and finding fingerprint format;
 - top-level Python names listed in `packrehearsal.__all__`;
 - the default static-scan boundary: no project-code execution, network access,

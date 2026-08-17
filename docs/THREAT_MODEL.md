@@ -27,6 +27,8 @@ code but still treats its output archive as untrusted data.
 - do not log environment variable values;
 - atomic report writes and refusal to replace symlinks;
 - deterministic parsing and explicit malformed-input findings.
+- Codex tasks label repository-derived text as untrusted data, quote it in
+  Markdown, and place work-order constraints before findings.
 
 The bundled GitHub Action also ignores repository configuration so an
 untrusted pull request cannot raise archive limits, disable rules, or broaden
@@ -69,3 +71,7 @@ process group instead of consuming unbounded temporary disk.
 
 Security reports that demonstrate a boundary bypass are handled under
 [`SECURITY.md`](../SECURITY.md).
+
+An agent can still misunderstand malicious or ambiguous repository text.
+Codex-task prompt-injection defenses reduce that risk but do not replace human
+review, least-privilege credentials, or an isolated execution environment.

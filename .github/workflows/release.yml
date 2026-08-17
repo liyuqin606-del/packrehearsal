@@ -82,6 +82,11 @@ jobs:
             --artifact dist/*.tar.gz \
             --format json \
             --output release-report.json
+          uv run packrehearsal codex-brief . \
+            --artifact dist/*.whl \
+            --artifact dist/*.tar.gz \
+            --format json \
+            --output codex-release-task.json
 
       - name: Verify clean wheel installation
         run: |
@@ -97,7 +102,7 @@ jobs:
         run: |
           (cd dist && sha256sum *) > SHA256SUMS.txt
           sha256sum wheel-report.json sdist-report.json release-report.json \
-            installed-release-report.json >> SHA256SUMS.txt
+            installed-release-report.json codex-release-task.json >> SHA256SUMS.txt
 
       - name: Attest release provenance
         uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
@@ -115,6 +120,7 @@ jobs:
             sdist-report.json
             release-report.json
             installed-release-report.json
+            codex-release-task.json
           )
           if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" "${assets[@]}" \

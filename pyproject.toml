@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "packrehearsal"
-version = "1.0.0"
-description = "Audit npm, Python, and Rust release artifacts before publishing."
+version = "1.1.0"
+description = "Audit release artifacts and generate evidence-bounded Codex maintenance tasks."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 authors = [{ name = "Yuqin Li" }]
-keywords = ["release", "packaging", "supply-chain", "npm", "python", "rust"]
+keywords = ["codex", "ai-agents", "release", "packaging", "supply-chain", "npm", "python", "rust"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Environment :: Console",

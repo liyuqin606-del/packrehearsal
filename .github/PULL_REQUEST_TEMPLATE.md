@@ -14,3 +14,4 @@
 - [ ] Documentation updated
 - [ ] Static mode still performs no network access or project-code execution
 - [ ] Threat model reviewed for archive, path, subprocess, or receipt changes
+- [ ] Codex task/schema changes preserve deterministic IDs, untrusted-data labeling, and human review

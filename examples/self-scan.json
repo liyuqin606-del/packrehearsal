@@ -35,11 +35,11 @@
       "name": "packrehearsal",
       "readme": "README.md",
       "root": ".",
-      "version": "1.0.0"
+      "version": "1.1.0"
     }
   ],
   "root": ".",
-  "scan_id": "9b7c1923daf335760bd3295ab167ac02a36a18a26062835507af75fde86d88d6",
+  "scan_id": "8b76a21618f03d09916b2cda8ccf06a12f81566a8de53ed4d5871233275a6edd",
   "schema_version": "1",
-  "tool_version": "1.0.0"
+  "tool_version": "1.1.0"
 }

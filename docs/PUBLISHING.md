@@ -14,7 +14,7 @@ Use this checklist for every PackRehearsal release.
    sources; the Release workflow builds, tests, inspects, attests, and uploads
    the assets.
 10. Verify the GitHub release contains the sdist, wheel, four inspection
-    reports, checksums, and artifact attestations.
+    reports, a Codex release task, checksums, and artifact attestations.
 11. Download the published assets and verify `SHA256SUMS.txt` plus
     `gh attestation verify` independently.
 12. Record the CI and Release workflow URLs and any known limitations.
