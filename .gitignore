@@ -20,6 +20,7 @@ dist/
 
 # Frontend dependencies and build output
 node_modules/
+.vite/
 
 # Editors and operating systems
 .DS_Store
