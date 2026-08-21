@@ -13,6 +13,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  webui:
+    name: WebUI
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: webui
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: webui/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Build the Release Gate WebUI
+        run: npm run build
+      - name: Test the static hosting worker
+        run: npm run test:sites
+
   quality:
     name: Quality
     runs-on: ubuntu-latest
