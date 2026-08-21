@@ -21,6 +21,17 @@ baseline, and receipt schemas v1; and published rule IDs follow the
 compatibility policy below. Intentional breaking changes require a new major
 version.
 
+## Release Gate WebUI preview
+
+![PackRehearsal Release Gate WebUI with Computer Modern typography](webui/design-qa/desktop-1487x1058.png)
+
+The experimental local [Release Gate WebUI](webui/README.md) turns a blocking
+finding into a reviewable Codex maintenance brief. It preserves the same safety
+boundary as the CLI: evidence and remediation are prepared for Codex, while a
+human remains responsible for edits, verification, merge, and release. The
+current browser build is an interaction and design preview; PackRehearsal 1.1's
+CLI output remains the authoritative scan result.
+
 ## Quick start
 
 Python 3.11 or newer is required. Install the immutable wheel attached to the
@@ -334,6 +345,7 @@ in the [compatibility policy](docs/COMPATIBILITY.md).
 - [Architecture](docs/ARCHITECTURE.md)
 - [Rule catalog](docs/RULES.md)
 - [Codex workflow](docs/CODEX_WORKFLOW.md)
+- [Community launch plan](docs/COMMUNITY_LAUNCH_PLAN.md)
 
 Security-sensitive reports should use GitHub private vulnerability reporting.
 PackRehearsal is licensed under [Apache-2.0](LICENSE).

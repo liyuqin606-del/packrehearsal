@@ -18,6 +18,9 @@ htmlcov/
 build/
 dist/
 
+# Frontend dependencies and build output
+node_modules/
+
 # Editors and operating systems
 .DS_Store
 .idea/
