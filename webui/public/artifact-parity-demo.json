@@ -1,0 +1,139 @@
+{
+  "artifacts": [
+    {
+      "entries": [
+        {
+          "compressed_size": 120,
+          "kind": "file",
+          "mode": 384,
+          "path": "demo-1.0.0.dist-info/METADATA",
+          "sha256": "eec732fc67c7bbc3ed5e6f13171e8f9a2985c2fd0e191f0ac3a32a8944ac1897",
+          "size": 120
+        },
+        {
+          "compressed_size": 0,
+          "kind": "file",
+          "mode": 384,
+          "path": "demo-1.0.0.dist-info/RECORD",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size": 0
+        },
+        {
+          "compressed_size": 19,
+          "kind": "file",
+          "mode": 384,
+          "path": "demo-1.0.0.dist-info/WHEEL",
+          "sha256": "84f9f3a253b5d4214a4107e8f9c7d14a8c0f7ec40879c76baf7f4778ebd51dc1",
+          "size": 19
+        }
+      ],
+      "format": "wheel",
+      "metadata": {
+        "container": "zip",
+        "entry_count": 3,
+        "hashed_entry_count": 3,
+        "license_expression": "MIT",
+        "metadata_source": "demo-1.0.0.dist-info/METADATA",
+        "package_name": "demo",
+        "package_version": "1.0.0",
+        "requires_dist": ["alpha>=1"],
+        "requires_python": ">=3.11",
+        "unpacked_size": 139
+      },
+      "path": "demo-1.0.0-py3-none-any.whl",
+      "sha256": "fecc6e0dc3874c8bdcd123803dce86a8e65d818ce726395aaa012b7fe5e6acc2",
+      "size": 553
+    },
+    {
+      "entries": [
+        {
+          "kind": "file",
+          "mode": 420,
+          "path": "demo-1.0.0/PKG-INFO",
+          "sha256": "bfaad51b6426362afc38fb8336bf9b34f7e8346bd1ec309b6fec72c4abff4769",
+          "size": 127
+        }
+      ],
+      "format": "sdist",
+      "metadata": {
+        "compressed": true,
+        "container": "tar",
+        "entry_count": 1,
+        "hashed_entry_count": 1,
+        "license_expression": "Apache-2.0",
+        "metadata_source": "demo-1.0.0/PKG-INFO",
+        "package_name": "demo",
+        "package_version": "1.0.0",
+        "requires_dist": ["alpha>=2"],
+        "requires_python": ">=3.12",
+        "unpacked_size": 127
+      },
+      "path": "demo-1.0.0.tar.gz",
+      "sha256": "5c63caf8d3a802214ec7dc0d3f7b658924c5ab9e4ef8dca1d6f35422228dce94",
+      "size": 227
+    }
+  ],
+  "baseline_fingerprints": [],
+  "counts": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "low": 0,
+    "medium": 0
+  },
+  "findings": [
+    {
+      "evidence": [
+        {
+          "key": "artifacts",
+          "value": "demo-1.0.0-py3-none-any.whl,demo-1.0.0.tar.gz"
+        },
+        {
+          "key": "field.license_expression",
+          "value": "demo-1.0.0-py3-none-any.whl=MIT | demo-1.0.0.tar.gz=Apache-2.0"
+        },
+        {
+          "key": "field.requires_dist",
+          "value": "demo-1.0.0-py3-none-any.whl=alpha>=1 | demo-1.0.0.tar.gz=alpha>=2"
+        },
+        {
+          "key": "field.requires_python",
+          "value": "demo-1.0.0-py3-none-any.whl=>=3.11 | demo-1.0.0.tar.gz=>=3.12"
+        },
+        {
+          "key": "mismatched_fields",
+          "value": "license_expression,requires_dist,requires_python"
+        }
+      ],
+      "fingerprint": "77bf808a303f66da48676f42",
+      "location": "demo-1.0.0-py3-none-any.whl <> demo-1.0.0.tar.gz",
+      "message": "The release artifact set disagrees on: license-expression, requires-dist, requires-python.",
+      "package": "python:demo@1.0.0",
+      "remediation": "Build the wheel from the sdist in one clean release job, then regenerate every candidate so their parsed metadata is identical.",
+      "rule_id": "python.artifact-set-mismatch",
+      "severity": "high",
+      "title": "Wheel and sdist metadata disagree"
+    }
+  ],
+  "packages": [
+    {
+      "ecosystem": "python",
+      "entrypoints": [],
+      "expected_files": [],
+      "internal_dependencies": [],
+      "manifest": "pyproject.toml",
+      "metadata": {
+        "dynamic_version": false,
+        "metadata_source": "pep621",
+        "requires_python": ">=3.11"
+      },
+      "name": "demo",
+      "root": ".",
+      "version": "1.0.0"
+    }
+  ],
+  "root": ".",
+  "scan_id": "593647fa8db7ae9c7ba4d8876ff347927067ec0f781e27810a9a318ad5a9489f",
+  "schema_version": "1",
+  "tool_version": "1.2.0"
+}

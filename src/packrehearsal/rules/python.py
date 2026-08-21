@@ -3,16 +3,21 @@
 from __future__ import annotations
 
 import configparser
+import hashlib
+import json
 import re
 from collections.abc import Iterable
 from pathlib import PurePosixPath
+from typing import Any
 
 from packrehearsal.models import Ecosystem, Finding, RuleDescriptor, Severity
 from packrehearsal.rules._utils import (
     load_toml_manifest,
     nested_mapping,
+    normalize_package_name,
     package_uses_dynamic_version,
     package_version_for_validation,
+    versions_equivalent,
 )
 from packrehearsal.rules.base import Rule, RuleContext
 
@@ -218,6 +223,76 @@ class PythonWheelRule(Rule):
         )
 
 
+class PythonArtifactSetMismatchRule(Rule):
+    descriptor = RuleDescriptor(
+        rule_id="python.artifact-set-mismatch",
+        title="Wheel and sdist metadata disagree",
+        description=(
+            "Release artifacts must agree on identity, compatibility, dependencies, license, "
+            "and extras before publication."
+        ),
+        default_severity=Severity.HIGH,
+        ecosystems=(Ecosystem.PYTHON,),
+    )
+
+    def evaluate(self, context: RuleContext) -> Iterable[Finding]:
+        candidates = tuple(
+            artifact
+            for artifact in context.artifacts
+            if artifact.format.casefold() in {"wheel", "sdist"}
+        )
+        formats = {artifact.format.casefold() for artifact in candidates}
+        if len(candidates) < 2 or not {"wheel", "sdist"} <= formats:
+            return
+
+        leader = candidates[0]
+        current = context.artifact
+        if current is None or (current.path, current.sha256) != (leader.path, leader.sha256):
+            return
+
+        mismatches: dict[str, tuple[tuple[str, Any], ...]] = {}
+        for field in (
+            "package_name",
+            "package_version",
+            "requires_python",
+            "requires_dist",
+            "license_expression",
+            "provides_extra",
+        ):
+            values = tuple(
+                (artifact.path, _artifact_metadata_value(artifact.metadata, field))
+                for artifact in candidates
+            )
+            if not _artifact_values_agree(field, values):
+                mismatches[field] = values
+
+        if not mismatches:
+            return
+
+        evidence: dict[str, str] = {
+            "artifacts": ",".join(artifact.path for artifact in candidates),
+            "mismatched_fields": ",".join(sorted(mismatches)),
+        }
+        for field, values in sorted(mismatches.items()):
+            evidence[f"field.{field}"] = " | ".join(
+                f"{path}={_metadata_summary(value)}" for path, value in values
+            )
+        yield self.finding(
+            context,
+            message=(
+                "The release artifact set disagrees on: "
+                + ", ".join(field.replace("_", "-") for field in sorted(mismatches))
+                + "."
+            ),
+            remediation=(
+                "Build the wheel from the sdist in one clean release job, then regenerate every "
+                "candidate so their parsed metadata is identical."
+            ),
+            location=" <> ".join(artifact.path for artifact in candidates),
+            evidence=evidence,
+        )
+
+
 def _nonempty_string(value: object) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
@@ -245,4 +320,52 @@ def _wheel_filename_problem(filename: str, name: str, version: str | None) -> st
     return None
 
 
-PYTHON_RULES = (PythonMetadataRule(), PythonDynamicVersionRule(), PythonWheelRule())
+def _artifact_metadata_value(metadata: Any, field: str) -> Any:
+    value = metadata.get(field)
+    if field in {"requires_dist", "provides_extra"}:
+        if value is None:
+            return ()
+        if isinstance(value, list | tuple) and all(isinstance(item, str) for item in value):
+            return tuple(sorted(re.sub(r"\s+", " ", item.strip()) for item in value))
+        return "<invalid>"
+    if isinstance(value, str):
+        return re.sub(r"\s+", " ", value.strip())
+    return "<missing>" if value is None else "<invalid>"
+
+
+def _artifact_values_agree(field: str, values: tuple[tuple[str, Any], ...]) -> bool:
+    normalized = [value for _, value in values]
+    if field == "package_name":
+        if not all(
+            isinstance(value, str) and value not in {"<missing>", "<invalid>"}
+            for value in normalized
+        ):
+            return False
+        canonical = [normalize_package_name(Ecosystem.PYTHON, value) for value in normalized]
+        return len(set(canonical)) == 1
+    if field == "package_version":
+        if not all(
+            isinstance(value, str) and value not in {"<missing>", "<invalid>"}
+            for value in normalized
+        ):
+            return False
+        first = normalized[0]
+        return all(versions_equivalent(Ecosystem.PYTHON, first, value) for value in normalized[1:])
+    return all(value == normalized[0] for value in normalized[1:])
+
+
+def _metadata_summary(value: Any) -> str:
+    if isinstance(value, tuple):
+        encoded = json.dumps(value, separators=(",", ":"), ensure_ascii=True).encode()
+        if len(value) <= 2 and len(encoded) <= 120:
+            return ", ".join(value) or "<none>"
+        return f"{len(value)} values sha256:{hashlib.sha256(encoded).hexdigest()[:12]}"
+    return str(value)
+
+
+PYTHON_RULES = (
+    PythonMetadataRule(),
+    PythonDynamicVersionRule(),
+    PythonWheelRule(),
+    PythonArtifactSetMismatchRule(),
+)

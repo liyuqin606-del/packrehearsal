@@ -94,7 +94,10 @@ def test_wheel_metadata_is_minimal(tmp_path: Path) -> None:
         {
             "demo-1.2.3.dist-info/WHEEL": b"Wheel-Version: 1.0\n",
             "demo-1.2.3.dist-info/METADATA": (
-                b"Metadata-Version: 2.4\nName: demo\nVersion: 1.2.3\nPrivate-Header: discard\n"
+                b"Metadata-Version: 2.4\nName: demo\nVersion: 1.2.3\n"
+                b"Requires-Python: >=3.11\nLicense-Expression: MIT\n"
+                b"Requires-Dist: beta>=2\nRequires-Dist: alpha>=1\n"
+                b"Provides-Extra: fast\nPrivate-Header: discard\n"
             ),
         },
     )
@@ -104,6 +107,10 @@ def test_wheel_metadata_is_minimal(tmp_path: Path) -> None:
     assert snapshot.metadata["package_name"] == "demo"
     assert snapshot.metadata["package_version"] == "1.2.3"
     assert snapshot.metadata["metadata_source"] == "demo-1.2.3.dist-info/METADATA"
+    assert snapshot.metadata["requires_python"] == ">=3.11"
+    assert snapshot.metadata["license_expression"] == "MIT"
+    assert snapshot.metadata["requires_dist"] == ("alpha>=1", "beta>=2")
+    assert snapshot.metadata["provides_extra"] == ("fast",)
     assert "Private-Header" not in snapshot.metadata
 
 

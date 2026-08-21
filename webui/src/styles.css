@@ -312,8 +312,16 @@ pre,
 .drop-zone small {
   position: absolute;
   right: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   color: #81818b;
   font-size: 13px;
+}
+
+.drop-zone small button {
+  color: var(--cobalt);
+  font-weight: 700;
 }
 
 .spin {
@@ -434,6 +442,28 @@ pre,
   max-width: 490px;
   margin: 0 0 20px;
   line-height: 1.5;
+}
+
+.empty-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.demo-action {
+  min-height: 44px;
+  padding: 0 4px;
+  color: var(--cobalt);
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.demo-action:hover {
+  color: #001ca5;
 }
 
 .gate-row {

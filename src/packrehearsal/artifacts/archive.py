@@ -706,7 +706,7 @@ def _remember_metadata(
 def _package_metadata(
     artifact_format: str,
     candidates: _MetadataCandidates,
-) -> dict[str, str]:
+) -> dict[str, object]:
     expected_kind = {
         "tgz": "npm",
         "wheel": "wheel",
@@ -723,7 +723,10 @@ def _package_metadata(
         if expected_kind == "npm":
             name, version = _parse_npm_metadata(payload)
         elif expected_kind in {"wheel", "sdist"}:
-            name, version = _parse_python_metadata(payload)
+            parsed = _parse_python_metadata(payload)
+            if parsed is None:
+                return {}
+            return {"metadata_source": source, **parsed}
         else:
             name, version = _parse_crate_metadata(payload)
     except (UnicodeError, ValueError, TypeError, json.JSONDecodeError, tomllib.TOMLDecodeError):
@@ -745,16 +748,48 @@ def _parse_npm_metadata(payload: bytes) -> tuple[str | None, str | None]:
     return _metadata_value(value.get("name")), _metadata_value(value.get("version"))
 
 
-def _parse_python_metadata(payload: bytes) -> tuple[str | None, str | None]:
+def _parse_python_metadata(payload: bytes) -> dict[str, object] | None:
     decoded = payload.decode("utf-8", errors="strict")
     message = Parser(policy=policy.default).parsestr(decoded, headersonly=True)
     if message.defects:
-        return None, None
+        return None
     names = message.get_all("Name", [])
     versions = message.get_all("Version", [])
     if len(names) != 1 or len(versions) != 1:
-        return None, None
-    return _metadata_value(names[0]), _metadata_value(versions[0])
+        return None
+    name = _metadata_value(names[0])
+    version = _metadata_value(versions[0])
+    if name is None or version is None:
+        return None
+
+    result: dict[str, object] = {
+        "package_name": name,
+        "package_version": version,
+    }
+    for header, key in (
+        ("Requires-Python", "requires_python"),
+        ("License-Expression", "license_expression"),
+    ):
+        scalar_values = message.get_all(header, [])
+        if len(scalar_values) == 1 and (value := _metadata_value(scalar_values[0])) is not None:
+            result[key] = value
+
+    if "license_expression" not in result:
+        legacy_values = message.get_all("License", [])
+        if len(legacy_values) == 1:
+            legacy = _metadata_value(legacy_values[0])
+            if legacy is not None and legacy.casefold() != "unknown":
+                result["license_expression"] = legacy
+
+    for header, key in (
+        ("Requires-Dist", "requires_dist"),
+        ("Provides-Extra", "provides_extra"),
+    ):
+        raw_values = message.get_all(header, [])
+        repeated_values = tuple(_metadata_value(item) for item in raw_values)
+        if raw_values and all(item is not None for item in repeated_values):
+            result[key] = tuple(sorted(item for item in repeated_values if item is not None))
+    return result
 
 
 def _parse_crate_metadata(payload: bytes) -> tuple[str | None, str | None]:

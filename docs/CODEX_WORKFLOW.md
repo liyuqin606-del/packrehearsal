@@ -19,6 +19,7 @@ OpenAI.
 ```bash
 packrehearsal codex-brief . \
   --artifact dist/example-1.2.3-py3-none-any.whl \
+  --artifact dist/example-1.2.3.tar.gz \
   --minimum-severity low \
   --format markdown \
   --output codex-maintenance-brief.md
