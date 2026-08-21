@@ -67,6 +67,19 @@ export function App() {
   const selectedCount = [...selectedFindingIds].filter((id) => eligibleIds.has(id)).length;
   const isReady = Boolean(report) && eligible.length === 0;
 
+  function acceptReport(nextReport, name) {
+    const nextEligible = eligibleFindings(nextReport);
+    const nextActive = nextEligible[0] ?? nextReport.findings[0] ?? null;
+    setReport(nextReport);
+    setSourceName(name);
+    setSelectedFindingIds(new Set(nextEligible.map((finding) => finding.fingerprint)));
+    setActiveFindingId(nextActive?.fingerprint ?? null);
+    setBrief(null);
+    setBriefOpen(false);
+    setImportState("ready");
+    setAnnouncement(`${name} loaded. ${nextReport.artifacts.length} artifact(s), ${nextEligible.length} new finding(s).`);
+  }
+
   async function importReport(file) {
     if (!file) return;
     setImportState("loading");
@@ -95,22 +108,30 @@ export function App() {
         setAnnouncement(`Import failed with ${result.errors.length} validation error(s).`);
         return;
       }
-      const nextEligible = eligibleFindings(result.report);
-      const nextActive = nextEligible[0] ?? result.report.findings[0] ?? null;
-      setReport(result.report);
-      setSourceName(file.name);
-      setSelectedFindingIds(new Set(nextEligible.map((finding) => finding.fingerprint)));
-      setActiveFindingId(nextActive?.fingerprint ?? null);
-      setBrief(null);
-      setBriefOpen(false);
-      setImportState("ready");
-      setAnnouncement(`${file.name} loaded. ${result.report.artifacts.length} artifact(s), ${nextEligible.length} new finding(s).`);
+      acceptReport(result.report, file.name);
     } catch (error) {
       setImportState("error");
       setImportErrors([`The browser could not read this file: ${error.message}`]);
       setAnnouncement("Import failed while reading the local file.");
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function loadDemo() {
+    setImportState("loading");
+    setImportErrors([]);
+    setAnnouncement("Loading the bundled wheel and sdist drift example.");
+    try {
+      const response = await fetch(new URL("artifact-parity-demo.json", document.baseURI));
+      if (!response.ok) throw new Error(`demo request returned ${response.status}`);
+      const result = parseReportText(await response.text());
+      if (!result.ok) throw new Error(result.errors.join("; "));
+      acceptReport(result.report, "artifact-parity-demo.json");
+    } catch (error) {
+      setImportState("error");
+      setImportErrors([`The bundled demo could not be loaded: ${error.message}`]);
+      setAnnouncement("Demo loading failed.");
     }
   }
 
@@ -224,7 +245,7 @@ export function App() {
           {importState === "loading" ? "Validating report-v1 locally…" : report ? `Loaded ${sourceName}. Drop a replacement report, or` : "Drop report-v1 JSON here, or"}{" "}
           {importState !== "loading" && <button type="button" onClick={() => fileInputRef.current?.click()}>click to browse</button>}
         </p>
-        <small>No upload · 10 MB limit</small>
+        <small><span>No upload · 10 MB limit</span><button type="button" onClick={loadDemo}>Load drift demo</button></small>
       </section>
 
       {importState === "error" && (
@@ -239,7 +260,7 @@ export function App() {
           <div className="section-heading"><h2>Release findings</h2><span>{report ? `${findings.length} total · ${selectedCount} selected` : "No report"}</span></div>
           {!report ? (
             <section className="workspace-empty">
-              <FileCode size={40} aria-hidden="true" /><h3>Bring a deterministic scan report</h3><p>Generate JSON with <code>packrehearsal scan . --format json --no-fail</code>, then inspect it here without sending it anywhere.</p><button className="secondary-action" type="button" onClick={() => fileInputRef.current?.click()}>Choose report JSON</button>
+              <FileCode size={40} aria-hidden="true" /><h3>Bring a deterministic scan report</h3><p>Generate JSON with <code>packrehearsal scan . --format json --no-fail</code>, then inspect it here without sending it anywhere.</p><div className="empty-actions"><button className="secondary-action" type="button" onClick={() => fileInputRef.current?.click()}>Choose report JSON</button><button className="demo-action" type="button" onClick={loadDemo}>Try the wheel ↔ sdist demo</button></div>
             </section>
           ) : findings.length === 0 ? (
             <section className="workspace-empty success"><CheckCircle size={42} aria-hidden="true" /><h3>No findings in this report</h3><p>No Codex task is generated because the report requests no repository changes.</p></section>

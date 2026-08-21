@@ -77,8 +77,9 @@ class RuleContext:
     ``repository_files`` are repository-relative POSIX paths. Supplying all
     discovered packages lets the context attribute a file to the deepest
     package root, preventing repository checks from being repeated for parent
-    and nested packages. ``artifact`` is the optional candidate artifact for
-    the current package.
+    and nested packages. ``artifact`` is the candidate currently being
+    evaluated; ``artifacts`` contains every candidate associated with the
+    package so cross-artifact rules can compare them without rereading files.
     """
 
     root: Path
@@ -87,6 +88,7 @@ class RuleContext:
     repository_files: tuple[str, ...] = ()
     artifact: ArtifactSnapshot | None = None
     packages: tuple[Package, ...] = ()
+    artifacts: tuple[ArtifactSnapshot, ...] = ()
 
     def __post_init__(self) -> None:
         root = self.root.expanduser().resolve()
@@ -99,9 +101,16 @@ class RuleContext:
         packages = tuple(
             sorted(packages, key=lambda item: (normalize_relative_path(item.root), item.identity))
         )
+        artifacts = self.artifacts
+        if not artifacts and self.artifact is not None:
+            artifacts = (self.artifact,)
+        elif self.artifact is not None and self.artifact not in artifacts:
+            artifacts = (*artifacts, self.artifact)
+        artifacts = tuple(sorted(artifacts, key=lambda item: (item.path, item.sha256)))
         object.__setattr__(self, "root", root)
         object.__setattr__(self, "repository_files", files)
         object.__setattr__(self, "packages", packages)
+        object.__setattr__(self, "artifacts", artifacts)
 
     @property
     def package_root(self) -> str:

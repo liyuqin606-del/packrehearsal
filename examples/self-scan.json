@@ -11,6 +11,23 @@
   "findings": [],
   "packages": [
     {
+      "ecosystem": "npm",
+      "entrypoints": [
+        "webui/src/main.jsx"
+      ],
+      "expected_files": [],
+      "internal_dependencies": [],
+      "license": "Apache-2.0",
+      "manifest": "webui/package.json",
+      "metadata": {
+        "private": true
+      },
+      "name": "packrehearsal-webui",
+      "readme": "webui/README.md",
+      "root": "webui",
+      "version": "0.1.0"
+    },
+    {
       "ecosystem": "python",
       "entrypoints": [
         "console:packrehearsal=packrehearsal.cli:main"
@@ -35,11 +52,11 @@
       "name": "packrehearsal",
       "readme": "README.md",
       "root": ".",
-      "version": "1.1.0"
+      "version": "1.2.0"
     }
   ],
   "root": ".",
-  "scan_id": "8b76a21618f03d09916b2cda8ccf06a12f81566a8de53ed4d5871233275a6edd",
+  "scan_id": "ccfbfe213d5a47d14f6ce3a35fac4077ab9302750b6c8b623fcfbfe62e143112",
   "schema_version": "1",
-  "tool_version": "1.1.0"
+  "tool_version": "1.2.0"
 }

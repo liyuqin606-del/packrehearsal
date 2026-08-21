@@ -31,6 +31,8 @@ source of truth. This document explains the rule families and severity policy.
 
 - project name and version are present in `[project]` or supported metadata;
 - wheel metadata agrees with the manifest;
+- wheel and sdist metadata agree with each other on name, version,
+  `Requires-Python`, dependencies, license expression, and extras;
 - console-script modules are included;
 - readme and license references exist in source;
 - sdists retain referenced files, while wheels may embed the README description

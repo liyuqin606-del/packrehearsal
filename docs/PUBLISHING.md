@@ -19,7 +19,7 @@ Use this checklist for every PackRehearsal release.
     `gh attestation verify` independently.
 12. Record the CI and Release workflow URLs and any known limitations.
 
-## First PyPI publication
+## PyPI trusted publication
 
 GitHub releases and PyPI publication are intentionally separate. The tag-driven
 release workflow remains the authority that builds, tests, scans, attests, and
@@ -27,11 +27,11 @@ publishes immutable assets. The manual `Publish an existing release to PyPI`
 workflow only downloads the wheel and sdist from that existing release, verifies
 them against `SHA256SUMS.txt`, and then sends those exact bytes to PyPI.
 
-Before the first publication, the project owner must complete the account-bound
-steps in PyPI:
+The first trusted publication was completed for v1.1.0. For every subsequent
+publication, retain these account-bound controls:
 
-1. Enable two-factor authentication on the maintainer's PyPI account.
-2. Create a pending trusted publisher for project `packrehearsal` using owner
+1. Keep two-factor authentication enabled on the maintainer's PyPI account.
+2. Keep the active trusted publisher limited to project `packrehearsal`, owner
    `liyuqin606-del`, repository `packrehearsal`, workflow `pypi.yml`, and
    environment `pypi`.
 3. Confirm that the GitHub `pypi` environment has the intended reviewer policy.

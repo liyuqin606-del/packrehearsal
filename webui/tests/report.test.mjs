@@ -10,6 +10,7 @@ import {
 } from "../src/report.js";
 
 const exampleUrl = new URL("../../examples/self-scan.json", import.meta.url);
+const demoUrl = new URL("../public/artifact-parity-demo.json", import.meta.url);
 const taskSchemaUrl = new URL("../../schemas/codex-task-v1.schema.json", import.meta.url);
 
 function assertSchema(value, schema, root, path = "$") {
@@ -66,6 +67,21 @@ test("accepts a real report-v1 emitted by PackRehearsal", async () => {
   const report = await exampleReport();
   assert.deepEqual(validateReport(report), { ok: true, errors: [] });
   assert.deepEqual(parseReportText(JSON.stringify(report)), { ok: true, report });
+});
+
+test("bundled artifact drift demo is valid and produces a bounded task", async () => {
+  const report = JSON.parse(await readFile(demoUrl, "utf8"));
+  assert.deepEqual(validateReport(report), { ok: true, errors: [] });
+  assert.equal(report.findings[0].rule_id, "python.artifact-set-mismatch");
+  assert.equal(report.artifacts.length, 2);
+
+  const task = await buildCodexTask(
+    report,
+    new Set([report.findings[0].fingerprint]),
+  );
+  assert.equal(task.status, "changes_requested");
+  assert.equal(task.summary.selected_finding_count, 1);
+  assert.equal(task.summary.artifact_count, 2);
 });
 
 test("rejects malformed JSON, unknown root fields, and dishonest counts", async () => {

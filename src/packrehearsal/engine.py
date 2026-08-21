@@ -97,6 +97,7 @@ def scan_repository(
                 packages=discovery.packages,
                 repository_files=repository_files,
                 artifact=artifact,
+                artifacts=matched,
                 config=active_config,
             )
             findings.extend(run_rules(context, active_registry))

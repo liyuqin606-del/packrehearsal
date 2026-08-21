@@ -3,6 +3,7 @@
 [![CI](https://github.com/liyuqin606-del/packrehearsal/actions/workflows/ci.yml/badge.svg)](https://github.com/liyuqin606-del/packrehearsal/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/liyuqin606-del/packrehearsal/actions/workflows/codeql.yml/badge.svg)](https://github.com/liyuqin606-del/packrehearsal/actions/workflows/codeql.yml)
 [![GitHub release](https://img.shields.io/github/v/release/liyuqin606-del/packrehearsal?display_name=tag)](https://github.com/liyuqin606-del/packrehearsal/releases)
+[![PyPI](https://img.shields.io/pypi/v/packrehearsal.svg)](https://pypi.org/project/packrehearsal/)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://www.python.org/)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-2E8B57.svg)](LICENSE)
 
@@ -35,12 +36,10 @@ contract but does not authenticate its author or rerun the scan.
 
 ## Quick start
 
-Python 3.11 or newer is required. Install the immutable wheel attached to the
-GitHub release:
+Python 3.11 or newer is required. Install the published package from PyPI:
 
 ```bash
-python -m pip install \
-  "https://github.com/liyuqin606-del/packrehearsal/releases/download/v1.1.0/packrehearsal-1.1.0-py3-none-any.whl"
+python -m pip install "packrehearsal==1.2.0"
 
 packrehearsal scan .
 packrehearsal codex-brief . --output codex-maintenance-brief.md
@@ -50,9 +49,9 @@ The repository dogfoods its own static scan. The checked-in
 [example report](examples/self-scan.json) currently renders as:
 
 ```text
-PackRehearsal 1.1.0
+PackRehearsal 1.2.0
 root: .
-packages: 1  artifacts: 0  findings: 0
+packages: 2  artifacts: 0  findings: 0
 
 No findings.
 ```
@@ -64,6 +63,19 @@ packrehearsal scan . \
   --artifact dist/example-1.2.3-py3-none-any.whl
 ```
 
+To gate the complete Python release set, pass the wheel and sdist together:
+
+```bash
+packrehearsal scan . \
+  --artifact dist/example-1.2.3-py3-none-any.whl \
+  --artifact dist/example-1.2.3.tar.gz
+```
+
+The `python.artifact-set-mismatch` gate compares package identity, version,
+`Requires-Python`, dependencies, license metadata, and extras across both
+artifacts. It blocks the release when bytes built for the same tag describe
+different install contracts.
+
 ## What it catches
 
 A green source tree can still produce a broken or unexpectedly packaged
@@ -73,6 +85,7 @@ artifact. PackRehearsal checks evidence at the release boundary:
 |---|---|
 | Declared entrypoint never reaches the archive | Manifest targets and archive members |
 | Wheel or sdist identifies the wrong release | Manifest name/version and artifact metadata |
+| Wheel and sdist disagree with each other | Parsed compatibility, dependency, license, and extra metadata |
 | README, license, or configured payload is omitted | Repository paths and packaged paths |
 | Credential-like or unexpectedly large file would ship | Repository and archive member inventory |
 | Monorepo packages publish incompatible sibling versions | Normalized internal dependency constraints |
@@ -90,6 +103,7 @@ or JSON task:
 ```bash
 packrehearsal codex-brief . \
   --artifact dist/example-1.2.3-py3-none-any.whl \
+  --artifact dist/example-1.2.3.tar.gz \
   --minimum-severity low \
   --format json \
   --output codex-maintenance-task.json
@@ -213,8 +227,7 @@ Install the optional Python build frontend, then acknowledge the execution
 boundary explicitly:
 
 ```bash
-python -m pip install \
-  "packrehearsal[rehearsal] @ https://github.com/liyuqin606-del/packrehearsal/releases/download/v1.1.0/packrehearsal-1.1.0-py3-none-any.whl"
+python -m pip install "packrehearsal[rehearsal]==1.2.0"
 
 packrehearsal rehearse . --trusted-rehearsal
 ```

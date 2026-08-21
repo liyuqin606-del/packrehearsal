@@ -30,6 +30,8 @@ npm run test:sites
 - Responsive desktop and mobile release-gate layouts.
 - Local import of real PackRehearsal `report-v1` JSON with strict version,
   required-field, unknown-field, digest, fingerprint, and count validation.
+- One-click, CLI-generated wheel/sdist drift demo so visitors can inspect a
+  real `python.artifact-set-mismatch` finding before producing their own report.
 - Honest idle, loading, invalid-report, empty-report, ready, and findings states.
 - Real package, artifact, finding, location, fingerprint, and evidence rendering.
 - Selection of non-baselined findings and deterministic generation of a

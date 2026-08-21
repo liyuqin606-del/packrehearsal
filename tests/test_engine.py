@@ -96,6 +96,44 @@ def test_artifact_association_uses_parsed_metadata_for_generic_filename() -> Non
     assert associations[0].package == second
 
 
+def test_engine_compares_the_complete_python_artifact_set(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "demo"\nversion = "1.0.0"\n',
+        encoding="utf-8",
+    )
+    wheel = ArtifactSnapshot(
+        "demo-1.0-py3-none-any.whl",
+        "wheel",
+        "a" * 64,
+        10,
+        (),
+        metadata={
+            "package_name": "demo",
+            "package_version": "1.0",
+            "requires_python": ">=3.11",
+        },
+    )
+    sdist = ArtifactSnapshot(
+        "demo-1.0.tar.gz",
+        "sdist",
+        "b" * 64,
+        10,
+        (),
+        metadata={
+            "package_name": "demo",
+            "package_version": "1.0.0",
+            "requires_python": ">=3.12",
+        },
+    )
+    report = scan_repository(
+        tmp_path,
+        artifacts=(wheel, sdist),
+        config=Config(enabled_rules=("python.artifact-set-mismatch",)),
+    )
+    assert [finding.rule_id for finding in report.findings] == ["python.artifact-set-mismatch"]
+    assert report.findings[0].location == ("demo-1.0-py3-none-any.whl <> demo-1.0.tar.gz")
+
+
 def test_file_collection_ignores_symlinks_and_excluded_trees(tmp_path: Path) -> None:
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "main.py").write_text("pass\n", encoding="utf-8")

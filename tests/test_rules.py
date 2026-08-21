@@ -66,6 +66,7 @@ def _context(
     files: tuple[str, ...],
     config: Config | None = None,
     artifact: ArtifactSnapshot | None = None,
+    artifacts: tuple[ArtifactSnapshot, ...] = (),
     packages: tuple[Package, ...] = (),
 ) -> RuleContext:
     return RuleContext(
@@ -74,6 +75,7 @@ def _context(
         config=config or Config(),
         repository_files=files,
         artifact=artifact,
+        artifacts=artifacts,
         packages=packages,
     )
 
@@ -85,6 +87,7 @@ def test_default_registry_has_unique_stable_ids() -> None:
     assert {
         "common.sensitive-file",
         "npm.invalid-main",
+        "python.artifact-set-mismatch",
         "python.invalid-wheel",
         "rust.invalid-include",
     } <= set(registry.rule_ids)
@@ -556,6 +559,91 @@ def test_python_metadata_and_wheel_rules(tmp_path: Path) -> None:
         )
         == ()
     )
+
+
+def test_python_wheel_and_sdist_metadata_must_match(tmp_path: Path) -> None:
+    package = _package(
+        Ecosystem.PYTHON,
+        name="demo-pkg",
+        version="1.0.0",
+        entrypoints=(),
+    )
+    wheel = ArtifactSnapshot(
+        path="a-demo-1.0-py3-none-any.whl",
+        format="wheel",
+        sha256="a" * 64,
+        size=10,
+        entries=(),
+        metadata={
+            "package_name": "Demo_Pkg",
+            "package_version": "1.0",
+            "requires_python": ">=3.11",
+            "requires_dist": ("alpha>=1", "beta; extra == 'fast'"),
+            "license_expression": "MIT",
+            "provides_extra": ("fast",),
+        },
+    )
+    matching_sdist = ArtifactSnapshot(
+        path="b-demo-1.0.tar.gz",
+        format="sdist",
+        sha256="b" * 64,
+        size=10,
+        entries=(),
+        metadata={
+            "package_name": "demo-pkg",
+            "package_version": "1.0.0",
+            "requires_python": ">=3.11",
+            "requires_dist": ("beta; extra == 'fast'", "alpha>=1"),
+            "license_expression": "MIT",
+            "provides_extra": ("fast",),
+        },
+    )
+    config = Config(enabled_rules=("python.artifact-set-mismatch",))
+    assert (
+        run_rules(
+            _context(
+                tmp_path,
+                package,
+                files=(),
+                config=config,
+                artifact=wheel,
+                artifacts=(wheel, matching_sdist),
+            )
+        )
+        == ()
+    )
+
+    drifting_sdist = ArtifactSnapshot(
+        path="b-demo-2.0.tar.gz",
+        format="sdist",
+        sha256="c" * 64,
+        size=10,
+        entries=(),
+        metadata={
+            "package_name": "demo-pkg",
+            "package_version": "2.0",
+            "requires_python": ">=3.12",
+            "requires_dist": ("alpha>=2",),
+            "license_expression": "Apache-2.0",
+        },
+    )
+    findings = run_rules(
+        _context(
+            tmp_path,
+            package,
+            files=(),
+            config=config,
+            artifact=wheel,
+            artifacts=(wheel, drifting_sdist),
+        )
+    )
+    assert [item.rule_id for item in findings] == ["python.artifact-set-mismatch"]
+    evidence = {item.key: item.value for item in findings[0].evidence}
+    assert evidence["mismatched_fields"] == (
+        "license_expression,package_version,provides_extra,requires_dist,requires_python"
+    )
+    assert findings[0].severity is Severity.HIGH
+    assert "Build the wheel from the sdist" in findings[0].remediation
 
 
 def test_rust_include_license_and_readme(tmp_path: Path) -> None:

@@ -5,8 +5,13 @@ Semantic Versioning after the first public release.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-08-21
+
 ### Added
 
+- Cross-artifact Python release gate that compares wheel and sdist name,
+  version, `Requires-Python`, dependencies, license metadata, and extras in one
+  static scan, emitting `python.artifact-set-mismatch` when they drift.
 - Release Gate WebUI import for real `report-v1` JSON, including strict local
   validation, honest loading/error/empty states, real artifact and finding
   evidence, baseline-aware selection, and deterministic `codex-task-v1` copy
@@ -21,6 +26,8 @@ Semantic Versioning after the first public release.
   evidence before publication.
 - Manual OIDC trusted-publishing workflow that verifies immutable GitHub release
   assets before a separately authorized first PyPI publication.
+- Credential-free PyPI distribution through a project-scoped GitHub OIDC
+  trusted publisher.
 
 ### Changed
 
@@ -91,7 +98,8 @@ Semantic Versioning after the first public release.
 - Incremental baselines and content-addressed, self-consistent release receipts.
 - Explicit trusted-rehearsal boundary for candidate builds.
 
-[Unreleased]: https://github.com/liyuqin606-del/packrehearsal/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/liyuqin606-del/packrehearsal/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/liyuqin606-del/packrehearsal/releases/tag/v1.2.0
 [1.1.0]: https://github.com/liyuqin606-del/packrehearsal/releases/tag/v1.1.0
 [1.0.0]: https://github.com/liyuqin606-del/packrehearsal/releases/tag/v1.0.0
 [0.1.0]: https://github.com/liyuqin606-del/packrehearsal/releases/tag/v0.1.0
