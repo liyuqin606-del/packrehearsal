@@ -5,6 +5,30 @@ Semantic Versioning after the first public release.
 
 ## [Unreleased]
 
+### Added
+
+- Release Gate WebUI import for real `report-v1` JSON, including strict local
+  validation, honest loading/error/empty states, real artifact and finding
+  evidence, baseline-aware selection, and deterministic `codex-task-v1` copy
+  and download.
+- Versioned maintenance evidence ledger, zero-dependency validator, and
+  deterministic Markdown reporter for measured Codex task outcomes.
+- Separate issue forms for false positives and public repository pilots,
+  discussion forms, a consent-scoped pilot guide, and a twelve-week public
+  maintenance roadmap.
+- Platform-specific technical article drafts for OpenAI Developer Community,
+  Python Packaging, and Open Design/Show HN, each gated on reproducible public
+  evidence before publication.
+- Manual OIDC trusted-publishing workflow that verifies immutable GitHub release
+  assets before a separately authorized first PyPI publication.
+
+### Changed
+
+- WebUI documentation now distinguishes contract validation from report
+  provenance and keeps the CLI as the authoritative scanner.
+- Contribution and support paths now separate bugs, false positives, rule
+  requests, authorized pilots, discussions, and private security reports.
+
 ## [1.1.0] - 2026-08-17
 
 ### Added

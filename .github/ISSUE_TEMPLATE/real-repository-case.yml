@@ -1,0 +1,71 @@
+name: Real repository pilot
+description: Volunteer a public release candidate for a measured PackRehearsal pilot or case study.
+title: "pilot: "
+labels: [pilot, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This form proposes a test; it does not grant permission to publish a case study. PackRehearsal performs static, local inspection by default, but a public issue remains public. Link only material you are authorized to share.
+  - type: input
+    id: repository
+    attributes:
+      label: Public repository
+      placeholder: https://github.com/owner/project
+    validations:
+      required: true
+  - type: textarea
+    id: authority
+    attributes:
+      label: Your relationship to the project
+      description: State whether you are a maintainer, contributor, or user and what you are authorized to share.
+    validations:
+      required: true
+  - type: dropdown
+    id: ecosystem
+    attributes:
+      label: Ecosystem
+      options: [npm, Python, Rust]
+    validations:
+      required: true
+  - type: input
+    id: release_candidate
+    attributes:
+      label: Exact release candidate
+      description: Link an immutable commit, tag, or already-public archive and include its SHA-256 when available.
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Current release workflow and question
+      description: What do you want the pilot to test, and where would a release gate run?
+    validations:
+      required: true
+  - type: dropdown
+    id: publication
+    attributes:
+      label: Public case-study permission
+      description: A maintainer will request final approval again before publishing any named case study.
+      options:
+        - Pilot only; do not publish a named case study
+        - Public aggregate metrics only; do not name the project
+        - Open to a named draft after I review and approve it
+    validations:
+      required: true
+  - type: textarea
+    id: redactions
+    attributes:
+      label: Redactions and constraints
+      description: List names, paths, logs, or operational details that must not be copied into reports.
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: The repository and release candidate are public, and I am authorized to share the links above.
+          required: true
+        - label: I understand that opening this issue does not authorize code changes, publication, endorsement claims, or a release.
+          required: true
+        - label: I have not included credentials, private source, personal data, or undisclosed vulnerabilities.
+          required: true

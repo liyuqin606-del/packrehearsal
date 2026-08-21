@@ -43,9 +43,13 @@ generic SaaS dashboard.
 
 ## Interaction
 
-- Gate rows are keyboard-selectable and update the evidence panel.
-- Artifact drop zone supports drag/drop and browse, then displays a scanning
-  state.
+- Gate rows are keyboard-selectable and update the evidence panel. Their task
+  checkboxes are separate controls with valid keyboard semantics.
+- The drop zone imports `report-v1` JSON with drag/drop or browse, then displays
+  local loading, contract error, empty, ready, or findings states.
 - Evidence rows open read-only detail.
-- The Codex action opens a bounded task preview with copy and download actions.
+- Only non-baselined findings can be selected. The Codex action opens a
+  deterministic `codex-task-v1` preview with copy and download actions.
+- Validation is described precisely: it checks shape and internal counts, not
+  authorship, provenance, or a rerun of the scan.
 - Provide visible focus, hover, active, loading, success, and passed states.

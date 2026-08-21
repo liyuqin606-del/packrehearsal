@@ -21,16 +21,17 @@ baseline, and receipt schemas v1; and published rule IDs follow the
 compatibility policy below. Intentional breaking changes require a new major
 version.
 
-## Release Gate WebUI preview
+## Release Gate WebUI
 
 ![PackRehearsal Release Gate WebUI with Computer Modern typography](webui/design-qa/desktop-1487x1058.png)
 
-The experimental local [Release Gate WebUI](webui/README.md) turns a blocking
-finding into a reviewable Codex maintenance brief. It preserves the same safety
-boundary as the CLI: evidence and remediation are prepared for Codex, while a
-human remains responsible for edits, verification, merge, and release. The
-current browser build is an interaction and design preview; PackRehearsal 1.1's
-CLI output remains the authoritative scan result.
+The local [Release Gate WebUI](webui/README.md) imports a real `report-v1` JSON
+file, exposes the report's artifacts and findings, and exports a deterministic,
+schema-compatible `codex-task-v1` brief for the maintainer's selected,
+non-baselined findings. Files stay in browser memory: the UI does not upload the
+report, read project files, execute project code, or merge and release changes.
+The CLI remains the authoritative scanner; the browser validates the report
+contract but does not authenticate its author or rerun the scan.
 
 ## Quick start
 
@@ -105,6 +106,11 @@ No API key is required: PackRehearsal produces the evidence bundle, while the
 maintainer decides whether and where to give it to Codex. See the complete
 [Codex maintainer workflow](docs/CODEX_WORKFLOW.md) and repository-native
 [`AGENTS.md`](AGENTS.md).
+
+Reviewed Codex outcomes can be recorded without inventing success metrics. The
+[maintenance evidence ledger](docs/MAINTENANCE_LEDGER.md) distinguishes measured
+tasks from targets, preserves rejected suggestions and boundary violations, and
+generates a deterministic public Markdown summary.
 
 ## Safe by default
 
@@ -345,6 +351,9 @@ in the [compatibility policy](docs/COMPATIBILITY.md).
 - [Architecture](docs/ARCHITECTURE.md)
 - [Rule catalog](docs/RULES.md)
 - [Codex workflow](docs/CODEX_WORKFLOW.md)
+- [Maintenance roadmap](docs/MAINTENANCE_ROADMAP.md)
+- [Maintenance evidence ledger](docs/MAINTENANCE_LEDGER.md)
+- [Public pilot and case-study guide](docs/community/PILOT_AND_CASE_STUDY_GUIDE.md)
 - [Community launch plan](docs/COMMUNITY_LAUNCH_PLAN.md)
 
 Security-sensitive reports should use GitHub private vulnerability reporting.

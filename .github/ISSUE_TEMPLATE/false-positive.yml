@@ -1,0 +1,68 @@
+name: False-positive report
+description: Report a valid release candidate that a PackRehearsal rule flags incorrectly.
+title: "false positive: "
+labels: [false-positive, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A false positive is a finding that fires even though the release candidate is valid for its intended consumer. Please provide public, minimal evidence. Never upload private archives, credentials, personal data, or unpublished vulnerability details.
+  - type: input
+    id: version
+    attributes:
+      label: PackRehearsal version
+      placeholder: 1.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: ecosystem
+    attributes:
+      label: Ecosystem
+      options: [common, npm, Python, Rust]
+    validations:
+      required: true
+  - type: input
+    id: rule
+    attributes:
+      label: Rule ID and finding fingerprint
+      placeholder: common.artifact-metadata-mismatch / 0123456789abcdef01234567
+    validations:
+      required: true
+  - type: textarea
+    id: finding
+    attributes:
+      label: Redacted finding and command
+      description: Include the exact command plus the relevant JSON, SARIF, or text output.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: valid_case
+    attributes:
+      label: Why this release candidate is valid
+      description: Link the relevant public specification, installer behavior, or package-consumer behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproducer
+    attributes:
+      label: Minimal public reproducer
+      description: Give steps to construct a synthetic archive, or link an immutable public commit and artifact. Do not attach a private package.
+    validations:
+      required: true
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Suggested detection boundary
+      description: Describe how the rule could distinguish this valid case without hiding real failures.
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: I removed credentials, private source, personal data, and non-public artifacts.
+          required: true
+        - label: I am not asking to disable a rule or weaken a baseline merely to pass a release.
+          required: true
+        - label: The reproducer may be retained in the public issue and, if separately proposed, converted into a minimal regression fixture.
+          required: true

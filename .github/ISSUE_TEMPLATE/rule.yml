@@ -1,8 +1,12 @@
-name: Rule proposal
-description: Propose an evidence-based release finding.
+name: Rule request
+description: Propose a deterministic release check backed by a concrete consumer failure.
 title: "rule: "
 labels: [rule-proposal, needs-triage]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Rules must inspect evidence available before publication and must distinguish invalid releases from valid edge cases. Style preferences alone are not release gates.
   - type: dropdown
     id: ecosystem
     attributes:
@@ -14,13 +18,14 @@ body:
     id: failure
     attributes:
       label: Concrete release failure
-      description: Link a public specification, registry behavior, or minimal fixture.
+      description: Describe the broken install, import, index, consumer, or disclosure outcome. Link public evidence.
     validations:
       required: true
   - type: textarea
     id: evidence
     attributes:
       label: Deterministic evidence available before publish
+      description: Identify exact manifest fields or archive bytes. The default scanner cannot execute project code or contact a registry.
     validations:
       required: true
   - type: textarea
@@ -35,3 +40,28 @@ body:
       label: Safe remediation
     validations:
       required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Suggested severity
+      options: [info, low, medium, high, critical]
+    validations:
+      required: true
+  - type: textarea
+    id: fixtures
+    attributes:
+      label: Proposed positive, negative, and false-positive fixtures
+      description: Explain how each fixture can be generated without committing private or third-party package archives.
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: I linked or described public evidence for the claimed consumer failure.
+          required: true
+        - label: The rule can be evaluated deterministically without network access or executing inspected project code.
+          required: true
+        - label: I removed credentials, private source, personal data, and undisclosed vulnerability details.
+          required: true

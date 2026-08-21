@@ -1,0 +1,87 @@
+name: Publish an existing release to PyPI
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing GitHub release tag, for example v1.2.0"
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  publish:
+    name: Verify and publish release artifacts
+    if: github.repository == 'liyuqin606-del/packrehearsal'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: pypi
+      url: https://pypi.org/project/packrehearsal/
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out the requested tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.tag }}
+
+      - name: Verify the tag and package versions agree
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          python - <<'PY'
+          import os
+          import tomllib
+          from pathlib import Path
+
+          project_version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
+          runtime_version = Path("src/packrehearsal/_version.py").read_text().split('"')[1]
+          expected_tag = f"v{project_version}"
+          actual_tag = os.environ["RELEASE_TAG"]
+          if runtime_version != project_version or actual_tag != expected_tag:
+              raise SystemExit(
+                  f"version mismatch: runtime={runtime_version}, project={project_version}, "
+                  f"tag={actual_tag}, expected={expected_tag}"
+              )
+          PY
+
+      - name: Download the immutable GitHub release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          mkdir -p dist release-metadata
+          gh release download "$RELEASE_TAG" --dir dist \
+            --pattern '*.whl' --pattern '*.tar.gz'
+          gh release download "$RELEASE_TAG" --dir release-metadata \
+            --pattern SHA256SUMS.txt
+
+      - name: Verify release checksums
+        run: |
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+
+          expected = {}
+          for line in Path("release-metadata/SHA256SUMS.txt").read_text().splitlines():
+              digest, name = line.split(maxsplit=1)
+              expected[Path(name).name] = digest
+
+          artifacts = sorted((*Path("dist").glob("*.whl"), *Path("dist").glob("*.tar.gz")))
+          if len(artifacts) != 2:
+              raise SystemExit(f"expected one wheel and one sdist, found {len(artifacts)}")
+          for artifact in artifacts:
+              actual = hashlib.sha256(artifact.read_bytes()).hexdigest()
+              wanted = expected.get(artifact.name)
+              if wanted is None or actual != wanted:
+                  raise SystemExit(f"checksum mismatch: {artifact.name}")
+          PY
+
+      - name: Publish verified distributions with trusted publishing
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        with:
+          packages-dir: dist/

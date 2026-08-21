@@ -2,6 +2,12 @@
 
 Research snapshot: 2026-08-21.
 
+This document identifies possible venues; it does not authorize posting and
+does not claim that any venue, project, or maintainer has adopted or endorsed
+PackRehearsal. Execution gates and status live in the
+[12-week maintenance roadmap](MAINTENANCE_ROADMAP.md). Real-repository outreach
+must follow the [pilot and case-study guide](community/PILOT_AND_CASE_STUDY_GUIDE.md).
+
 PackRehearsal should be introduced as a release-engineering tool with an
 evidence-bounded Codex workflow, not as a generic AI coding demo. The strongest
 message is: **inspect the bytes that will ship, turn only verified findings into
@@ -38,6 +44,21 @@ control.**
 Do not post the same marketing copy everywhere on one day. Stagger launches so
 feedback from the first community can improve the demo, documentation, and
 technical explanation for the next one.
+
+## Publication readiness gates
+
+No draft is ready merely because its prose is complete.
+
+| Draft | Minimum publication gate |
+|---|---|
+| [OpenAI Codex maintenance loop](community/articles/DRAFT_OPENAI_CODEX_MAINTENANCE_LOOP.md) | Re-run the scan-to-brief commands, validate the task schema, publish a redacted report, and verify the stated agent boundaries. |
+| [Python artifact boundary](community/articles/DRAFT_PYTHON_PACKAGING_ARTIFACT_BOUNDARY.md) | Test the pinned release against a redistributable wheel and sdist, have the expected result reviewed, and disclose any false positive. |
+| [Open Design / Show HN release gate](community/articles/DRAFT_OPEN_DESIGN_AND_SHOW_HN_RELEASE_GATE.md) | Open Design may receive a clearly labeled preview. Show HN requires real report import, valid task export, clean setup, accessibility checks, and a runnable public example. |
+
+After each publication, wait long enough to triage substantive responses and
+incorporate corrections before preparing the next venue. Record reproducible
+feedback and no-change decisions; do not count reactions, votes, or stars as
+rule validation.
 
 ## Launch copy skeleton
 

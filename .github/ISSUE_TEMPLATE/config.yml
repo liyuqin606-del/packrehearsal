@@ -6,3 +6,6 @@ contact_links:
   - name: Usage question
     url: https://github.com/liyuqin606-del/packrehearsal/discussions/new?category=q-a
     about: Ask how to interpret findings or integrate PackRehearsal into a release workflow.
+  - name: Pilot and case-study guide
+    url: https://github.com/liyuqin606-del/packrehearsal/blob/main/docs/community/PILOT_AND_CASE_STUDY_GUIDE.md
+    about: Read the consent, redaction, and measurement rules before volunteering a real repository.

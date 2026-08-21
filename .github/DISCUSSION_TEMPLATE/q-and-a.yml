@@ -1,0 +1,40 @@
+title: "[Question] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for public installation, interpretation, and workflow questions. For reproducible defects or false positives, use an issue form. Never post credentials, private archives, personal data, or undisclosed vulnerability details.
+  - type: input
+    id: version
+    attributes:
+      label: PackRehearsal version
+      placeholder: 1.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: ecosystem
+    attributes:
+      label: Ecosystem
+      options: [npm, Python, Rust, archive-only, general]
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to accomplish?
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried?
+      description: Include the exact command and a short, redacted output excerpt.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Public-data check
+      options:
+        - label: I removed credentials, private source, private artifacts, and personal data.
+          required: true

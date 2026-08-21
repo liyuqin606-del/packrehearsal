@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/liyuqin606-del/packrehearsal/schemas/maintenance-ledger-v1.schema.json",
+  "title": "PackRehearsal Codex maintenance evidence ledger v1",
+  "description": "Maintainer-entered observations and separately labeled prospective targets.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["period", "project", "report_status", "schema_version", "targets", "tasks"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "project": { "type": "string", "minLength": 1 },
+    "report_status": { "enum": ["measured", "template"] },
+    "period": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["end", "start"],
+          "properties": {
+            "start": { "type": "string", "format": "date" },
+            "end": { "type": "string", "format": "date" }
+          }
+        }
+      ]
+    },
+    "tasks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/task" }
+    },
+    "targets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/target" }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "report_status": { "const": "template" } } },
+      "then": {
+        "properties": {
+          "period": { "type": "null" },
+          "tasks": { "maxItems": 0 }
+        }
+      },
+      "else": { "properties": { "period": { "type": "object" } } }
+    }
+  ],
+  "$defs": {
+    "portableId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "boundary_violation",
+        "codex_minutes",
+        "false_positive",
+        "finding_ids",
+        "human_minutes",
+        "outcome",
+        "task_id",
+        "verification"
+      ],
+      "properties": {
+        "task_id": { "$ref": "#/$defs/portableId" },
+        "finding_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/portableId" }
+        },
+        "outcome": { "enum": ["accepted", "modified", "rejected"] },
+        "human_minutes": { "type": "number", "minimum": 0 },
+        "codex_minutes": { "type": "number", "minimum": 0 },
+        "false_positive": { "type": "boolean" },
+        "boundary_violation": { "type": "boolean" },
+        "verification": { "enum": ["passed", "failed", "not_run"] }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["description", "target_id", "unit", "value"],
+      "properties": {
+        "target_id": { "$ref": "#/$defs/portableId" },
+        "description": { "type": "string", "minLength": 1 },
+        "value": { "type": "number", "minimum": 0 },
+        "unit": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

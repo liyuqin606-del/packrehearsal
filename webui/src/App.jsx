@@ -1,431 +1,316 @@
 import { useMemo, useRef, useState } from "react";
 import {
-  ArrowSquareOut,
-  Check,
-  CheckCircle,
-  CloudSlash,
-  Copy,
-  DownloadSimple,
-  FileText,
-  LockSimple,
-  ShieldCheck,
-  SpinnerGap,
-  UploadSimple,
-  UserCheck,
-  WarningCircle,
-  X,
+  ArrowSquareOut, Check, CheckCircle, CloudSlash, Copy, DownloadSimple,
+  FileCode, FileText, LockSimple, ShieldCheck, SpinnerGap, UploadSimple,
+  UserCheck, WarningCircle, X,
 } from "@phosphor-icons/react";
-
-const INITIAL_ARTIFACTS = [
-  {
-    kind: "PYPI",
-    name: "packrehearsal-1.1.0-py3-none-any.whl",
-    size: "95.6 KB",
-    hash: "312dc6221694b243e48903478a47fc4b4a265803fc1a76a1a94c7748ee186c1b",
-  },
-  {
-    kind: "SDIST",
-    name: "packrehearsal-1.1.0.tar.gz",
-    size: "166.2 KB",
-    hash: "410a2501174b0a137004403e9447b4261d902c9d110d4c3cbedcc83a4ecb25a2",
-  },
-];
-
-const GATES = [
-  {
-    id: "metadata",
-    number: 1,
-    status: "blocking",
-    title: "Metadata consistency (core)",
-    summary: "Name and version must match across artifacts and metadata.",
-    ruleId: "common.artifact-metadata-mismatch",
-    heading: "What failed",
-    detail: "The project name in the wheel metadata does not match the sdist.",
-  },
-  {
-    id: "integrity",
-    number: 2,
-    status: "passed",
-    title: "File integrity",
-    summary: "Hashes match declared digests; no corruption detected.",
-    ruleId: "common.artifact-integrity",
-    heading: "What passed",
-    detail: "Both release artifacts match their recorded SHA-256 digests.",
-  },
-  {
-    id: "validity",
-    number: 3,
-    status: "passed",
-    title: "Core metadata validity",
-    summary: "Core metadata is well-formed and required fields are valid.",
-    ruleId: "python.invalid-metadata",
-    heading: "What passed",
-    detail: "Wheel and sdist metadata parsed without executing project code.",
-  },
-];
-
-const EVIDENCE_ROWS = [
-  ["Wheel METADATA (excerpt)", "Name: packrehearsal"],
-  ["Sdist PKG-INFO (excerpt)", "Name: pack-rehearsal"],
-  ["Diff", "1 field differs"],
-];
+import {
+  artifactKind, buildCodexTask, eligibleFindings, parseReportText, SEVERITY_RANK,
+} from "./report.js";
 
 const STATUS_ITEMS = [
-  [ShieldCheck, "Static inspection"],
-  [CloudSlash, "Offline"],
+  [ShieldCheck, "Static report inspection"],
+  [CloudSlash, "Local only"],
   [ShieldCheck, "No project code executed"],
   [UserCheck, "Human review before merge"],
 ];
 
 function bytesLabel(bytes) {
-  return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
 }
 
-function uploadedKind(name) {
-  if (name.endsWith(".whl")) return "PYPI";
-  if (name.endsWith(".crate")) return "CRATE";
-  if (name.endsWith(".tgz")) return "NPM";
-  return "SDIST";
+function reportIdentity(report) {
+  if (!report) return "No report loaded";
+  if (!report.packages.length) return `Scan ${report.scan_id.slice(0, 12)}`;
+  const first = report.packages[0];
+  return report.packages.length === 1
+    ? `${first.name} ${first.version}`
+    : `${first.name} ${first.version} +${report.packages.length - 1}`;
 }
 
-async function sha256Hex(file) {
-  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
-  return Array.from(new Uint8Array(digest), (byte) =>
-    byte.toString(16).padStart(2, "0"),
-  ).join("");
+function basename(path) {
+  return path.split(/[\\/]/).filter(Boolean).at(-1) || path || "Unnamed artifact";
+}
+
+function severityLabel(severity) {
+  return severity === "info" ? "INFO" : severity.toUpperCase();
 }
 
 export function App() {
-  const [activeGateId, setActiveGateId] = useState("metadata");
-  const [artifacts, setArtifacts] = useState(INITIAL_ARTIFACTS);
+  const [report, setReport] = useState(null);
+  const [sourceName, setSourceName] = useState("");
+  const [activeFindingId, setActiveFindingId] = useState(null);
+  const [selectedFindingIds, setSelectedFindingIds] = useState(new Set());
+  const [importState, setImportState] = useState("idle");
+  const [importErrors, setImportErrors] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [scanState, setScanState] = useState("complete");
   const [evidenceOpen, setEvidenceOpen] = useState(null);
+  const [brief, setBrief] = useState(null);
   const [briefOpen, setBriefOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [announcement, setAnnouncement] = useState("Choose a PackRehearsal report-v1 JSON file.");
   const fileInputRef = useRef(null);
-  const activeGate = GATES.find((gate) => gate.id === activeGateId) ?? GATES[0];
-  const isBlocking = activeGate.status === "blocking";
 
-  const brief = useMemo(
-    () => ({
-      schema_version: "1",
-      tool: "packrehearsal",
-      tool_version: "1.1.0",
-      status: "changes_requested",
-      task_id: "4e14f3a0e2d8412cb105d9f468afdce8",
-      scan_id: "8b76a21618f03d09916b2cda8ccf06a",
-      objective: "Resolve the metadata mismatch without weakening release policy.",
-      findings: [
-        {
-          rule_id: "common.artifact-metadata-mismatch",
-          severity: "high",
-          location: "dist/packrehearsal-1.1.0-py3-none-any.whl",
-          remediation: "Make the package name consistent, rebuild, and rerun the scan.",
-        },
-      ],
-      constraints: [
-        "Do not execute project code or enable network access.",
-        "Do not suppress the finding or weaken policy.",
-        "Keep a human reviewer in the loop; do not merge or release automatically.",
-      ],
-      verification: ["packrehearsal scan . --format json --no-fail"],
-    }),
-    [],
+  const eligible = useMemo(() => (report ? eligibleFindings(report) : []), [report]);
+  const findings = useMemo(
+    () => report ? [...report.findings].sort((left, right) =>
+      SEVERITY_RANK[right.severity] - SEVERITY_RANK[left.severity]
+      || left.rule_id.localeCompare(right.rule_id)
+      || left.fingerprint.localeCompare(right.fingerprint),
+    ) : [],
+    [report],
   );
+  const activeFinding = findings.find((finding) => finding.fingerprint === activeFindingId) ?? findings[0] ?? null;
+  const eligibleIds = useMemo(() => new Set(eligible.map((finding) => finding.fingerprint)), [eligible]);
+  const selectedCount = [...selectedFindingIds].filter((id) => eligibleIds.has(id)).length;
+  const isReady = Boolean(report) && eligible.length === 0;
 
-  async function applyFiles(fileList) {
-    const files = Array.from(fileList ?? []).filter((file) =>
-      [".whl", ".tar.gz", ".tgz", ".crate", ".zip"].some((extension) =>
-        file.name.endsWith(extension),
-      ),
-    );
-    if (!files.length) return;
-    setScanState("scanning");
-    const replacements = await Promise.all(
-      files.slice(0, 3).map(async (file) => ({
-        kind: uploadedKind(file.name),
-        name: file.name,
-        size: bytesLabel(file.size),
-        hash: await sha256Hex(file),
-      })),
-    );
-    setArtifacts(replacements);
-    setScanState("complete");
+  async function importReport(file) {
+    if (!file) return;
+    setImportState("loading");
+    setImportErrors([]);
+    setAnnouncement(`Reading ${file.name} locally.`);
+    await new Promise((resolve) => window.setTimeout(resolve, 80));
+
+    if (!file.name.toLowerCase().endsWith(".json")) {
+      setImportState("error");
+      setImportErrors(["Choose a .json file produced by `packrehearsal scan . --format json --no-fail`."]);
+      setAnnouncement("Import failed. The selected file is not JSON.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setImportState("error");
+      setImportErrors(["Report exceeds the 10 MB local review limit."]);
+      setAnnouncement("Import failed. The report is too large.");
+      return;
+    }
+
+    try {
+      const result = parseReportText(await file.text());
+      if (!result.ok) {
+        setImportState("error");
+        setImportErrors(result.errors);
+        setAnnouncement(`Import failed with ${result.errors.length} validation error(s).`);
+        return;
+      }
+      const nextEligible = eligibleFindings(result.report);
+      const nextActive = nextEligible[0] ?? result.report.findings[0] ?? null;
+      setReport(result.report);
+      setSourceName(file.name);
+      setSelectedFindingIds(new Set(nextEligible.map((finding) => finding.fingerprint)));
+      setActiveFindingId(nextActive?.fingerprint ?? null);
+      setBrief(null);
+      setBriefOpen(false);
+      setImportState("ready");
+      setAnnouncement(`${file.name} loaded. ${result.report.artifacts.length} artifact(s), ${nextEligible.length} new finding(s).`);
+    } catch (error) {
+      setImportState("error");
+      setImportErrors([`The browser could not read this file: ${error.message}`]);
+      setAnnouncement("Import failed while reading the local file.");
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   function handleDrop(event) {
     event.preventDefault();
     setIsDragging(false);
-    applyFiles(event.dataTransfer.files);
+    importReport(event.dataTransfer.files?.[0]);
+  }
+
+  function toggleFinding(fingerprint) {
+    if (!eligibleIds.has(fingerprint)) return;
+    setSelectedFindingIds((current) => {
+      const next = new Set(current);
+      if (next.has(fingerprint)) next.delete(fingerprint);
+      else next.add(fingerprint);
+      return next;
+    });
+    setBrief(null);
+  }
+
+  async function prepareBrief() {
+    if (!report || selectedCount === 0) return;
+    setAnnouncement("Preparing deterministic Codex task JSON.");
+    const task = await buildCodexTask(report, selectedFindingIds);
+    setBrief(task);
+    setBriefOpen(true);
+    setAnnouncement(`Codex task ${task.task_id.slice(0, 12)} prepared for human review.`);
   }
 
   function downloadBrief() {
-    const blob = new Blob([`${JSON.stringify(brief, null, 2)}\n`], {
-      type: "application/json",
-    });
+    if (!brief) return;
+    const blob = new Blob([`${JSON.stringify(brief, null, 2)}\n`], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = "codex-maintenance-task.json";
+    anchor.download = `codex-task-${brief.scan_id.slice(0, 12)}.json`;
     anchor.click();
     URL.revokeObjectURL(url);
+    setAnnouncement("Codex task JSON downloaded.");
   }
 
   async function copyBrief() {
-    await navigator.clipboard.writeText(JSON.stringify(brief, null, 2));
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
+    if (!brief) return;
+    try {
+      await navigator.clipboard.writeText(`${JSON.stringify(brief, null, 2)}\n`);
+      setCopied(true);
+      setAnnouncement("Codex task JSON copied to the clipboard.");
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setAnnouncement("Clipboard access was denied. Download the task JSON instead.");
+    }
   }
 
   return (
     <main className="release-app">
       <header className="app-header">
         <div className="brand-lockup" aria-label="PackRehearsal Release Gate">
-          <strong>PackRehearsal</strong>
-          <span aria-hidden="true" />
-          <p>Release Gate</p>
+          <strong>PackRehearsal</strong><span aria-hidden="true" /><p>Release Gate</p>
         </div>
         <div className="status-strip" aria-label="Safety properties">
           {STATUS_ITEMS.map(([Icon, label]) => (
             <div className="status-pill" key={label} title={label}>
-              <Icon size={18} aria-hidden="true" />
-              <span>{label}</span>
+              <Icon size={18} aria-hidden="true" /><span>{label}</span>
             </div>
           ))}
         </div>
       </header>
 
-      <section className="release-summary" aria-labelledby="release-title">
-        <div className="verdict-block">
-          <h1 id="release-title">Not Ready</h1>
-          <p>1 blocking issue must be fixed</p>
+      <section className={`release-summary ${!report ? "is-empty" : ""}`} aria-labelledby="release-title">
+        <div className={`verdict-block ${isReady ? "ready" : !report ? "awaiting" : ""}`}>
+          <h1 id="release-title">{!report ? "Awaiting Report" : isReady ? "Ready" : "Not Ready"}</h1>
+          <p>{!report ? "Import a report-v1 file to evaluate the release" : isReady ? "No new findings request changes" : `${eligible.length} new finding${eligible.length === 1 ? "" : "s"} request review`}</p>
         </div>
         <div className="artifact-summary">
-          <h2>packrehearsal 1.1.0</h2>
-          <div className="artifact-grid">
-            {artifacts.slice(0, 2).map((artifact) => (
-              <article className="artifact-item" key={artifact.name}>
-                <div className="artifact-line">
-                  <span className={`artifact-badge ${artifact.kind.toLowerCase()}`}>
-                    {artifact.kind}
-                  </span>
-                  <strong>{artifact.name}</strong>
-                  <small>({artifact.size})</small>
-                </div>
-                <p className="hash-line"><span>SHA-256:</span> {artifact.hash}</p>
-              </article>
-            ))}
+          <div className="release-identity-line">
+            <h2>{reportIdentity(report)}</h2>
+            {report && <code title={report.scan_id}>scan {report.scan_id.slice(0, 12)}</code>}
           </div>
+          {report?.artifacts.length ? (
+            <div className="artifact-grid">
+              {report.artifacts.map((artifact) => {
+                const kind = artifactKind(artifact.format, artifact.path);
+                return (
+                  <article className="artifact-item" key={`${artifact.path}:${artifact.sha256}`}>
+                    <div className="artifact-line">
+                      <span className={`artifact-badge ${kind.toLowerCase()}`}>{kind}</span>
+                      <strong title={artifact.path}>{basename(artifact.path)}</strong>
+                      <small>({bytesLabel(artifact.size)})</small>
+                    </div>
+                    <p className="hash-line" title={artifact.sha256}><span>SHA-256:</span> {artifact.sha256}</p>
+                  </article>
+                );
+              })}
+            </div>
+          ) : <p className="artifact-empty">{report ? "This valid report contains no artifact snapshots." : "Artifact identity will appear here after local validation."}</p>}
         </div>
       </section>
 
       <section
-        className={`drop-zone ${isDragging ? "is-dragging" : ""}`}
-        onDragEnter={(event) => {
-          event.preventDefault();
-          setIsDragging(true);
-        }}
+        className={`drop-zone ${isDragging ? "is-dragging" : ""} ${importState === "error" ? "has-error" : ""}`}
+        onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
         onDragOver={(event) => event.preventDefault()}
-        onDragLeave={() => setIsDragging(false)}
+        onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false); }}
         onDrop={handleDrop}
-        aria-label="Replace release artifacts"
+        aria-label="Import PackRehearsal report-v1 JSON"
+        aria-busy={importState === "loading"}
       >
-        <input
-          ref={fileInputRef}
-          type="file"
-          tabIndex={-1}
-          aria-hidden="true"
-          accept=".whl,.tar.gz,.tgz,.crate,.zip"
-          multiple
-          onChange={(event) => applyFiles(event.target.files)}
-        />
-        {scanState === "scanning" ? (
-          <SpinnerGap className="spin" size={21} aria-hidden="true" />
-        ) : (
-          <UploadSimple size={21} aria-hidden="true" />
-        )}
+        <input ref={fileInputRef} id="report-input" type="file" tabIndex={-1} aria-hidden="true" accept="application/json,.json" onChange={(event) => importReport(event.target.files?.[0])} />
+        {importState === "loading" ? <SpinnerGap className="spin" size={21} aria-hidden="true" /> : <UploadSimple size={21} aria-hidden="true" />}
         <p>
-          {scanState === "scanning"
-            ? "Inspecting replacement artifacts…"
-            : "Drop replacement wheel or sdist here, or"}{" "}
-          {scanState !== "scanning" && (
-            <button type="button" onClick={() => fileInputRef.current?.click()}>
-              click to browse
-            </button>
-          )}
+          {importState === "loading" ? "Validating report-v1 locally…" : report ? `Loaded ${sourceName}. Drop a replacement report, or` : "Drop report-v1 JSON here, or"}{" "}
+          {importState !== "loading" && <button type="button" onClick={() => fileInputRef.current?.click()}>click to browse</button>}
         </p>
-        <small>Supports .whl, .tar.gz, .tgz, .crate</small>
+        <small>No upload · 10 MB limit</small>
       </section>
 
-      <section className="gate-workspace">
+      {importState === "error" && (
+        <section className="import-error" role="alert" aria-labelledby="import-error-title">
+          <WarningCircle size={23} aria-hidden="true" />
+          <div><h2 id="import-error-title">Report not loaded</h2><p>The selected file is not a valid PackRehearsal report-v1 document.</p><ol>{importErrors.slice(0, 8).map((error) => <li key={error}><code>{error}</code></li>)}</ol>{importErrors.length > 8 && <p>Plus {importErrors.length - 8} more validation errors.</p>}</div>
+        </section>
+      )}
+
+      <section className="gate-workspace" aria-label="Release report">
         <div className="gate-list-panel">
-          <div className="section-heading"><h2>Release gates</h2><span>3 of 3</span></div>
-          <div className="gate-list">
-            {GATES.map((gate) => {
-              const selected = gate.id === activeGateId;
-              return (
-                <button
-                  className={`gate-row ${gate.status} ${selected ? "selected" : ""}`}
-                  key={gate.id}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => setActiveGateId(gate.id)}
-                >
-                  <span className="gate-index">{gate.number}</span>
-                  <span className="gate-copy">
-                    <span className="gate-title-line">
-                      <strong>{gate.title}</strong>
-                      {gate.status === "blocking" && <em>BLOCKING</em>}
-                    </span>
-                    <span className="gate-summary">{gate.summary}</span>
-                    <span className="rule-id">Rule ID: {gate.ruleId}</span>
-                  </span>
-                  {gate.status === "blocking" ? (
-                    <WarningCircle className="gate-state-icon" size={31} />
-                  ) : (
-                    <CheckCircle className="gate-state-icon" size={31} />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <div className="gate-list-footer">
-            <p>Gates are evaluated offline with read-only artifact inspection.</p>
-            <button type="button" onClick={() => setEvidenceOpen("definitions")}>
-              View gate definitions <ArrowSquareOut size={15} aria-hidden="true" />
-            </button>
-          </div>
+          <div className="section-heading"><h2>Release findings</h2><span>{report ? `${findings.length} total · ${selectedCount} selected` : "No report"}</span></div>
+          {!report ? (
+            <section className="workspace-empty">
+              <FileCode size={40} aria-hidden="true" /><h3>Bring a deterministic scan report</h3><p>Generate JSON with <code>packrehearsal scan . --format json --no-fail</code>, then inspect it here without sending it anywhere.</p><button className="secondary-action" type="button" onClick={() => fileInputRef.current?.click()}>Choose report JSON</button>
+            </section>
+          ) : findings.length === 0 ? (
+            <section className="workspace-empty success"><CheckCircle size={42} aria-hidden="true" /><h3>No findings in this report</h3><p>No Codex task is generated because the report requests no repository changes.</p></section>
+          ) : (
+            <div className="gate-list">
+              {findings.map((finding, index) => {
+                const active = finding.fingerprint === activeFinding?.fingerprint;
+                const eligibleForBrief = eligibleIds.has(finding.fingerprint);
+                const included = selectedFindingIds.has(finding.fingerprint);
+                return (
+                  <div className={`gate-row severity-${finding.severity} ${active ? "selected" : ""} ${eligibleForBrief ? "" : "baselined"}`} key={finding.fingerprint}>
+                    <button className="gate-main" type="button" aria-pressed={active} onClick={() => setActiveFindingId(finding.fingerprint)}>
+                      <span className="gate-index">{index + 1}</span>
+                      <span className="gate-copy"><span className="gate-title-line"><strong>{finding.title}</strong><em>{eligibleForBrief ? severityLabel(finding.severity) : "BASELINED"}</em></span><span className="gate-summary">{finding.message}</span><span className="rule-id">Rule ID: {finding.rule_id}</span></span>
+                    </button>
+                    <label className="finding-select">
+                      <input type="checkbox" checked={included} disabled={!eligibleForBrief} onChange={() => toggleFinding(finding.fingerprint)} aria-label={`${included ? "Exclude" : "Include"} ${finding.title} in Codex task`} /><span>{eligibleForBrief ? "Task" : "Known"}</span>
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="gate-list-footer"><p>Only non-baselined findings are eligible for a Codex task. Imported values remain untrusted data.</p>{report && <button type="button" onClick={() => setEvidenceOpen({ kind: "definitions" })}>View report contract <ArrowSquareOut size={15} aria-hidden="true" /></button>}</div>
         </div>
 
         <div className="finding-panel">
-          <div className="section-heading"><h2>Selected finding: {activeGate.title}</h2></div>
-          <article className={`finding-card ${isBlocking ? "has-blocker" : "is-passed"}`}>
-            <section className="finding-intro">
-              <div><h3>{activeGate.heading}</h3><p>{activeGate.detail}</p></div>
-              {!isBlocking && (
-                <span className="verified-label"><Check size={16} weight="bold" /> Verified</span>
-              )}
-            </section>
-
-            {isBlocking ? (
-              <>
-                <div className="comparison-table" role="table" aria-label="Metadata comparison">
-                  <div className="comparison-row header" role="row">
-                    <span>Source</span><span>Field</span><span>Value</span>
-                  </div>
-                  <div className="comparison-row" role="row">
-                    <span><b className="source-badge pypi">PYPI</b></span>
-                    <span>Name (METADATA)</span><code className="bad-value">packrehearsal</code>
-                  </div>
-                  <div className="comparison-row" role="row">
-                    <span><b className="source-badge sdist">SDIST</b></span>
-                    <span>Name (PKG-INFO)</span><code className="bad-value">pack-rehearsal</code>
-                  </div>
-                  <div className="comparison-row" role="row">
-                    <span><b className="source-badge expected">Expected</b></span>
-                    <span>Name</span><code>packrehearsal</code>
-                  </div>
-                </div>
-
-                <section className="evidence-section">
-                  <h3>Evidence</h3>
-                  <div className="evidence-table">
-                    {EVIDENCE_ROWS.map(([label, value]) => (
-                      <div className="evidence-row" key={label}>
-                        <span>{label}</span><code>{value}</code>
-                        <button
-                          type="button"
-                          aria-label={`View ${label}`}
-                          onClick={() => setEvidenceOpen(label)}
-                        >
-                          View <ArrowSquareOut size={14} aria-hidden="true" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="explanation-grid">
-                  <div><h3>Why it matters</h3><p>Name mismatches can break installation, indexing, and dependency resolution.</p></div>
-                  <div>
-                    <h3>How to fix</h3><p>Ensure the project name is consistent across all metadata sources.</p>
-                    <ul>
-                      <li>Update build configuration in <code>pyproject.toml</code>.</li>
-                      <li>Regenerate artifacts to propagate the correct name.</li>
-                    </ul>
-                  </div>
-                </section>
-
-                <button className="primary-action" type="button" onClick={() => setBriefOpen(true)}>
-                  <FileText size={24} aria-hidden="true" /> Prepare Codex fix brief
-                </button>
-              </>
-            ) : (
-              <section className="passed-detail">
-                <CheckCircle size={42} aria-hidden="true" />
-                <div><h3>Evidence verified</h3><p>This gate does not need a Codex fix brief. Select the blocking metadata gate to prepare remediation.</p></div>
+          <div className="section-heading"><h2>{activeFinding ? `Selected finding: ${activeFinding.title}` : "Selected finding"}</h2></div>
+          {!activeFinding ? (
+            <article className="finding-card empty-finding"><FileText size={40} aria-hidden="true" /><h3>{report ? "No remediation requested" : "Evidence appears after import"}</h3><p>{report ? "This report contains no finding to inspect." : "Load a valid report-v1 JSON document to review its exact findings, artifacts, and evidence."}</p></article>
+          ) : (
+            <article className={`finding-card has-finding severity-${activeFinding.severity}`}>
+              <section className="finding-intro"><div><h3>What the scan found</h3><p>{activeFinding.message}</p></div><span className={`severity-label severity-${activeFinding.severity}`}>{severityLabel(activeFinding.severity)}</span></section>
+              <dl className="finding-metadata">
+                <div><dt>Rule</dt><dd><code>{activeFinding.rule_id}</code></dd></div><div><dt>Package</dt><dd>{activeFinding.package || "Repository"}</dd></div><div><dt>Location</dt><dd><code>{activeFinding.location || "Not supplied"}</code></dd></div><div><dt>Fingerprint</dt><dd><code>{activeFinding.fingerprint}</code></dd></div>
+              </dl>
+              <section className="evidence-section">
+                <h3>Evidence</h3>
+                {activeFinding.evidence?.length ? (
+                  <div className="evidence-table">{activeFinding.evidence.map((item, index) => <div className="evidence-row" key={`${item.key}:${index}`}><span>{item.key}</span><code title={item.value}>{item.value}</code><button type="button" aria-label={`View evidence ${item.key}`} onClick={() => setEvidenceOpen({ kind: "evidence", item, finding: activeFinding })}>View <ArrowSquareOut size={14} aria-hidden="true" /></button></div>)}</div>
+                ) : <p className="evidence-empty">This finding contains no structured evidence rows. Review its message and location without inferring missing facts.</p>}
               </section>
-            )}
-          </article>
-          <p className="brief-boundary"><LockSimple size={17} /> The brief contains findings and remediation guidance only. No project code is included.</p>
+              <section className="explanation-grid"><div><h3>Required remediation</h3><p>{activeFinding.remediation}</p></div>{!eligibleIds.has(activeFinding.fingerprint) && <div className="baseline-note"><LockSimple size={17} /><p>This fingerprint is in the report baseline. It is shown for context and cannot be placed in a new Codex task.</p></div>}</section>
+              <button className="primary-action" type="button" disabled={selectedCount === 0} onClick={prepareBrief}><FileText size={24} aria-hidden="true" />{selectedCount ? `Prepare Codex brief · ${selectedCount} finding${selectedCount === 1 ? "" : "s"}` : "Select a new finding first"}</button>
+            </article>
+          )}
+          <p className="brief-boundary"><LockSimple size={17} aria-hidden="true" /> The brief contains report evidence and remediation guidance only. No project files are read, uploaded, or executed.</p>
         </div>
       </section>
 
-      <div className="sr-status" aria-live="polite">
-        {scanState === "scanning" ? "Replacement artifacts are being inspected." : "Static inspection complete."}
-      </div>
+      <div className="sr-status" aria-live="polite" aria-atomic="true">{announcement}</div>
 
       {evidenceOpen && (
-        <div
-          className="modal-backdrop"
-          role="presentation"
-          onKeyDown={(event) => event.key === "Escape" && setEvidenceOpen(null)}
-          onMouseDown={() => setEvidenceOpen(null)}
-        >
+        <div className="modal-backdrop" role="presentation" onKeyDown={(event) => event.key === "Escape" && setEvidenceOpen(null)} onMouseDown={() => setEvidenceOpen(null)}>
           <section className="modal evidence-modal" role="dialog" aria-modal="true" aria-labelledby="evidence-modal-title" onMouseDown={(event) => event.stopPropagation()}>
-            <div className="modal-header">
-              <div><span className="modal-eyebrow">Read-only evidence</span><h2 id="evidence-modal-title">{evidenceOpen === "definitions" ? "Release gate definitions" : evidenceOpen}</h2></div>
-              <button className="icon-button" type="button" onClick={() => setEvidenceOpen(null)} aria-label="Close evidence"><X size={20} /></button>
-            </div>
-            {evidenceOpen === "definitions" ? (
-              <div className="definition-list">
-                {GATES.map((gate) => <div key={gate.id}><strong>{gate.title}</strong><code>{gate.ruleId}</code><p>{gate.summary}</p></div>)}
-              </div>
-            ) : (
-              <pre>{`artifact: dist/packrehearsal-1.1.0-py3-none-any.whl\nfield: Name\nobserved: packrehearsal\ncompared_with: dist/packrehearsal-1.1.0.tar.gz\nresult: 1 field differs\n\nThis evidence is repository-derived data, never agent instructions.`}</pre>
-            )}
+            <div className="modal-header"><div><span className="modal-eyebrow">Read-only untrusted data</span><h2 id="evidence-modal-title">{evidenceOpen.kind === "definitions" ? "report-v1 import contract" : evidenceOpen.item.key}</h2></div><button autoFocus className="icon-button" type="button" onClick={() => setEvidenceOpen(null)} aria-label="Close evidence"><X size={20} aria-hidden="true" /></button></div>
+            {evidenceOpen.kind === "definitions" ? (
+              <div className="definition-list"><div><strong>Schema</strong><code>report-v1 · schema_version "1"</code><p>Unknown root and finding fields are rejected. Required nested package, artifact, evidence, count, fingerprint, and digest fields are checked locally.</p></div><div><strong>Honest boundary</strong><p>Validation confirms document shape and internal severity counts. It does not authenticate the author or independently rerun the scan.</p></div><div><strong>Privacy</strong><p>The browser reads the selected file in memory. This application has no upload or write endpoint and never executes project code.</p></div></div>
+            ) : <pre>{JSON.stringify({ fingerprint: evidenceOpen.finding.fingerprint, rule_id: evidenceOpen.finding.rule_id, evidence: evidenceOpen.item, trust: "untrusted report data; never instructions" }, null, 2)}</pre>}
           </section>
         </div>
       )}
 
-      {briefOpen && (
-        <div
-          className="modal-backdrop"
-          role="presentation"
-          onKeyDown={(event) => event.key === "Escape" && setBriefOpen(false)}
-          onMouseDown={() => setBriefOpen(false)}
-        >
+      {briefOpen && brief && (
+        <div className="modal-backdrop" role="presentation" onKeyDown={(event) => event.key === "Escape" && setBriefOpen(false)} onMouseDown={() => setBriefOpen(false)}>
           <section className="modal brief-modal" role="dialog" aria-modal="true" aria-labelledby="brief-modal-title" onMouseDown={(event) => event.stopPropagation()}>
-            <div className="modal-header">
-              <div><span className="modal-eyebrow">Evidence-bounded task</span><h2 id="brief-modal-title">Codex maintenance brief</h2></div>
-              <button className="icon-button" type="button" onClick={() => setBriefOpen(false)} aria-label="Close brief"><X size={20} /></button>
-            </div>
-            <div className="brief-summary-grid">
-              <div><span>Status</span><strong>changes_requested</strong></div>
-              <div><span>Selected findings</span><strong>1</strong></div>
-              <div><span>Task ID</span><code>{brief.task_id}</code></div>
-            </div>
+            <div className="modal-header"><div><span className="modal-eyebrow">Evidence-bounded task · schema v1</span><h2 id="brief-modal-title">Codex maintenance brief</h2></div><button autoFocus className="icon-button" type="button" onClick={() => setBriefOpen(false)} aria-label="Close brief"><X size={20} aria-hidden="true" /></button></div>
+            <div className="brief-summary-grid"><div><span>Status</span><strong>{brief.status}</strong></div><div><span>Selected findings</span><strong>{brief.summary.selected_finding_count}</strong></div><div><span>Task ID</span><code title={brief.task_id}>{brief.task_id}</code></div></div>
+            <p className="brief-review-note"><UserCheck size={18} aria-hidden="true" /> Review this data-only task before giving it to Codex. Downloading does not run an agent or change the repository.</p>
             <pre className="brief-json">{JSON.stringify(brief, null, 2)}</pre>
-            <div className="modal-actions">
-              <button className="secondary-action" type="button" onClick={copyBrief}>
-                {copied ? <Check size={18} weight="bold" /> : <Copy size={18} />}
-                {copied ? "Copied" : "Copy JSON"}
-              </button>
-              <button className="primary-action compact" type="button" onClick={downloadBrief}>
-                <DownloadSimple size={20} /> Download task JSON
-              </button>
-            </div>
+            <div className="modal-actions"><button className="secondary-action" type="button" onClick={copyBrief}>{copied ? <Check size={18} weight="bold" /> : <Copy size={18} />}{copied ? "Copied" : "Copy JSON"}</button><button className="primary-action compact" type="button" onClick={downloadBrief}><DownloadSimple size={20} /> Download task JSON</button></div>
           </section>
         </div>
       )}
