@@ -1,16 +1,31 @@
 name: Bug report
-description: Report an incorrect finding, unsafe behavior, or CLI failure.
+description: Report a crash, unsafe behavior, or incorrect CLI behavior (use the false-positive form for a valid package flagged by a rule).
 title: "bug: "
 labels: [bug, needs-triage]
 body:
   - type: markdown
     attributes:
-      value: Do not post credentials or undisclosed vulnerabilities. Use private reporting for security issues.
+      value: |
+        Thanks for helping improve PackRehearsal. Do not post credentials, private package contents, personal data, or undisclosed vulnerabilities. Use private vulnerability reporting for security-sensitive details.
   - type: input
     id: version
     attributes:
       label: PackRehearsal version
       placeholder: 1.1.0
+    validations:
+      required: true
+  - type: input
+    id: install
+    attributes:
+      label: Installation method
+      placeholder: pipx, uv tool, pip, source checkout, or other
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system and runtime
+      placeholder: macOS 15 / arm64 / Python 3.13
     validations:
       required: true
   - type: dropdown
@@ -21,22 +36,40 @@ body:
     validations:
       required: true
   - type: textarea
-    id: reproducer
+    id: steps
     attributes:
-      label: Minimal public reproducer
-      description: Include the command, smallest safe manifest or generated fixture, and actual output.
+      label: Minimal public reproducer and exact command
+      description: Prefer a tiny generated fixture or a public immutable repository link. Include configuration and artifact arguments.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Paste the complete, redacted error or finding output. Attachments are optional.
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
-      label: Expected behavior and evidence
+      label: Expected behavior
+      description: Explain what should happen and why. Link a specification when the expectation depends on package semantics.
     validations:
       required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional diagnostic context
+      description: Mention whether the same input works on another version or platform. Do not include secrets or private artifacts.
   - type: checkboxes
     id: safety
     attributes:
-      label: Safety confirmation
+      label: Confirmations
       options:
         - label: I removed tokens, credentials, private source, and personal data.
+          required: true
+        - label: This is not an undisclosed vulnerability. If it is security-sensitive, I will use private vulnerability reporting instead.
+          required: true
+        - label: I searched existing issues and can reproduce this on the version listed above.
           required: true

@@ -1,0 +1,50 @@
+title: "[Release workflow] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share a public release workflow, integration experiment, or lesson learned. A discussion is not evidence that a project has adopted or endorsed PackRehearsal. Named case studies require separate maintainer review and approval.
+  - type: input
+    id: repository
+    attributes:
+      label: Public repository or synthetic example
+      placeholder: https://github.com/owner/project or “synthetic fixture”
+    validations:
+      required: true
+  - type: dropdown
+    id: ecosystem
+    attributes:
+      label: Ecosystem
+      options: [npm, Python, Rust, multiple]
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Workflow
+      description: Include the commands, where the gate runs, and whether input artifacts were prebuilt or created by a trusted build.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and outcome
+      description: Report finding rule IDs, false positives, no-op results, and verification. Distinguish observations from conclusions.
+    validations:
+      required: true
+  - type: textarea
+    id: limitations
+    attributes:
+      label: Limitations and open question
+      description: Name at least one limitation and ask the community one specific question.
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: I am authorized to share the linked material and have removed credentials, private source, personal data, and non-public vulnerabilities.
+          required: true
+        - label: I will not describe this experiment as adoption, endorsement, or a security guarantee without separate evidence.
+          required: true
