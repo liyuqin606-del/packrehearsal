@@ -39,7 +39,11 @@ jobs:
           from pathlib import Path
 
           project_version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
-          runtime_version = Path("src/packrehearsal/_version.py").read_text().split('"')[1]
+          version_source = Path("src/packrehearsal/_version.py").read_text()
+          marker = '__version__ = "'
+          if marker not in version_source:
+              raise SystemExit("runtime version assignment not found")
+          runtime_version = version_source.split(marker, 1)[1].split('"', 1)[0]
           expected_tag = f"v{project_version}"
           actual_tag = os.environ["RELEASE_TAG"]
           if runtime_version != project_version or actual_tag != expected_tag:
